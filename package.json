@@ -1,0 +1,38 @@
+{
+  "name": "edc-ws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "out/src/index.js",
+  "types": "out/src/index.d.ts",
+  "scripts": {
+    "lint": "eslint \"./src/**/*.ts\" --fix",
+    "build": " npm run lint && tsc --sourcemap",
+    "deploy": "npm run build && serverless deploy",
+    "test": "node ./out/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/fs-extra": "^9.0.1",
+    "@types/uuid": "^8.3.0",
+    "@types/ws": "^7.2.7",
+    "uuid": "^8.3.1",
+    "ws": "^7.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^14.11.2",
+    "@typescript-eslint/eslint-plugin": "^4.3.0",
+    "@typescript-eslint/parser": "^4.3.0",
+    "eslint": "^7.10.0",
+    "eslint-config-airbnb": "^18.1.0",
+    "eslint-config-prettier": "^6.12.0",
+    "eslint-import-resolver-typescript": "^2.0.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsx-a11y": "^6.2.3",
+    "eslint-plugin-prettier": "^3.1.2",
+    "eslint-plugin-react": "^7.21.2",
+    "eslint-plugin-react-hooks": "^4.1.2",
+    "prettier": "^2.1.2",
+    "typescript": "^4.0.3"
+  }
+}

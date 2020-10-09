@@ -1,3 +1,21 @@
+# package directories
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+
+# 
+out
+
+#
+.vscode
+
+debug.js
+
+#### Git initatied values below
+
+
 # Logs
 logs
 *.log
