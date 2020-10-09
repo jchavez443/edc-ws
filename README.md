@@ -11,7 +11,7 @@ An Event is a JSON object defined as
 
 Note: for `"type"` `error` and `acknowledgement` are reserved for **Error Event** and **Acknowledgement Event** respectivley
 
-```json
+```ts
 {
     "type": string,                //Event type 
     "id": string,                  //UUID for the event,
@@ -35,7 +35,7 @@ Note: for `"type"` `error` and `acknowledgement` are reserved for **Error Event*
 
 ### Error Event
 
-```json
+```ts
 Error Event 
 {
     "type": "error",
@@ -106,7 +106,10 @@ Error Event
     "id": "93de2206-9669-4e07-948d-329f4b722ee2",
     "trigger": "0a385c23-4b65-4d9f-8c78-6b7bf5ad0530",
     "details": {
-        ...
+        "cn": "common-error",
+        "code": 10983,
+        "message": "Common error caused my silly mistake",
+        "data": {}
      },
     "failed": {
         "type": "initiate",
@@ -187,7 +190,10 @@ Is only used with the `"type": "error"` event.  It MUST be a copy of the event t
     "id": "93de2206-9669-4e07-948d-329f4b722ee2",
     "trigger": "0a385c23-4b65-4d9f-8c78-6b7bf5ad0530",
     "details": {
-        ...
+        "cn": "common-error",
+        "code": 10983,
+        "message": "Common error caused my silly mistake",
+        "data": {}
      },
     "failed": {
         "type": "initiate",
