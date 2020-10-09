@@ -1,20 +1,13 @@
 import WebSocket, { OpenEvent } from 'ws'
-import { IAckEvent, IErrorEvent, IEvent, IEvents } from '../../interface'
-/* eslint-disable class-methods-use-this */
-import Edc from '../common'
+import { IEvents } from '../../interface'
+import RootClient from '../common'
+import { ClientHandlers } from '../interfaces'
 
-export default class Client extends Edc {
+// eslint-disable-next-line import/prefer-default-export
+export default class Client extends RootClient {
     ws: WebSocket
 
-    constructor(
-        url: string,
-        handlers: {
-            onEvent: (client: Client, ws: WebSocket, event: IEvent<any>) => Promise<any>
-            onError: (client: Client, ws: WebSocket, event: IErrorEvent) => Promise<any>
-            onAck: (client: Client, ws: WebSocket, event: IAckEvent) => Promise<any>
-        },
-        timeout?: number
-    ) {
+    constructor(url: string, handlers: ClientHandlers, timeout?: number) {
         super(handlers)
 
         if (timeout) this.ackTimeout = timeout
@@ -32,10 +25,12 @@ export default class Client extends Edc {
         }
     }
 
+    // eslint-disable-next-line class-methods-use-this
     private onConnection(event: OpenEvent): void {
         event.target.send(`Client protocol: edc '1.0'`)
     }
 
+    // eslint-disable-next-line class-methods-use-this
     onClose(ws: WebSocket, event: WebSocket.CloseEvent) {
         console.log(`Connection closed`)
     }

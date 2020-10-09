@@ -1,10 +1,10 @@
-import { on } from 'process'
 /* eslint-disable class-methods-use-this */
 import WebSocket, { MessageEvent, CloseEvent } from 'ws'
 import { Events, AckEvent, ErrorEvent, Event } from '../events/index'
 import { IAckEvent, IErrorEvent, IEvent, IEvents } from '../interface'
+import { Handlers } from './interfaces'
 
-export default abstract class Edc {
+export default abstract class RootClient {
     protected requestedAcks: Map<
         string,
         [timeout: NodeJS.Timeout, resolve: (event: IEvents) => void, reject: (reason: any) => void]
@@ -17,17 +17,13 @@ export default abstract class Edc {
     /**
      * @returns Promise
      */
-    onEvent: (edc: Edc, ws: WebSocket, event: IEvent<any>) => Promise<any>
+    onEvent: (edc: RootClient, ws: WebSocket, event: IEvent<any>) => Promise<any>
 
-    onError: (edc: Edc, ws: WebSocket, event: IErrorEvent) => Promise<any>
+    onError: (edc: RootClient, ws: WebSocket, event: IErrorEvent) => Promise<any>
 
-    onAck: (edc: Edc, ws: WebSocket, event: IAckEvent) => Promise<any>
+    onAck: (edc: RootClient, ws: WebSocket, event: IAckEvent) => Promise<any>
 
-    constructor(handlers: {
-        onEvent: (edc: Edc, ws: WebSocket, event: IEvent<any>) => Promise<any>
-        onError: (edc: Edc, ws: WebSocket, event: IErrorEvent) => Promise<any>
-        onAck: (edc: Edc, ws: WebSocket, event: IAckEvent) => Promise<any>
-    }) {
+    constructor(handlers: Handlers) {
         this.onAck = handlers.onAck
         this.onError = handlers.onError
         this.onEvent = handlers.onEvent

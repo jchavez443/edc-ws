@@ -1,26 +1,19 @@
 import WebSocket from 'ws'
 import ConnectionManager from '../connections/connection-manager'
 import { Events } from '../../events/index'
-import Edc from '../common'
+import RootClient from '../common'
 import { IEvents, IEvent, IAckEvent, IErrorEvent } from '../../interface'
+import { ServerHandlers } from '../interfaces'
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 
-export default class Server extends Edc {
+// eslint-disable-next-line import/prefer-default-export
+export default class Server extends RootClient {
     wss: WebSocket.Server
 
     connectionManager: ConnectionManager
 
-    constructor(
-        port: number,
-        connectionManager: ConnectionManager,
-        handlers: {
-            onEvent: (wss: Server, ws: WebSocket, event: IEvent<any>) => Promise<any>
-            onError: (wss: Server, ws: WebSocket, event: IErrorEvent) => Promise<any>
-            onAck: (wss: Server, ws: WebSocket, event: IAckEvent) => Promise<any>
-        },
-        timeout?: number
-    ) {
+    constructor(port: number, connectionManager: ConnectionManager, handlers: ServerHandlers, timeout?: number) {
         super(handlers)
 
         this.connectionManager = connectionManager

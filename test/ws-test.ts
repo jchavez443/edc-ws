@@ -1,7 +1,6 @@
 import WebSocket from 'ws'
-import Edc, { Event, IEvent } from '../src/index'
+import Edc, { Event, IEvent, Server } from '../src/index'
 import ConnectionManagerCycle from './connectionManager'
-import Server from '../src/ws/server'
 
 async function onAck(wss: Server, ws: any, cause: any) {
     console.log(`Ack for: ${cause.trigger}`)
