@@ -17,8 +17,8 @@ Note: for `"type"` `error` and `acknowledgement` are reserved for **Error Event*
     "id": string,                  //UUID for the event,
     "trigger":? string,            // UUID of the event triggering this event
     "acknowledge":? boolean,       // The event must be acknowledged
-    "details":? {},           // Details of this event
-    "shared":? {},            // Shared information from the chain of events, (modifiable),
+    "details":? {},                // Details of this event
+    "shared":? {},                 // Shared information from the chain of events, (modifiable),
     "failed":? Event               // If a error occurs on an event that did not request acknowledgement
 }
 ```
