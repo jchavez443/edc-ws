@@ -1,6 +1,14 @@
 import 'mocha'
 import { expect, assert } from 'chai'
-import EDC, { ClientHandlers, Event, ServerHandlers, ErrorEvent, IEvents, Client, DefaultConnectionManager } from '../src'
+import Edc, {
+    ClientHandlers,
+    Event,
+    ServerHandlers,
+    ErrorEvent,
+    IEvents,
+    Client,
+    DefaultConnectionManager
+} from '../src'
 
 const port = 8082
 
@@ -9,20 +17,18 @@ const serverHandlers: ServerHandlers = {
     onError: async () => {},
     onEvent: async () => {},
 
-    onConnect: async (server, connectionInfo, event) => {
-        //console.log(`New connection made by ${connectionInfo.connectionId}`)
-    }
+    onConnect: async (server, connectionInfo, event) => {}
 }
 
-const server = new EDC.Server(port, serverHandlers, new DefaultConnectionManager(), 500)
+const server = new Edc.Server(port, serverHandlers, new DefaultConnectionManager(), 500)
 
 const clientHandlers: ClientHandlers = {
     onAck: async () => {},
     onError: async () => {},
     onEvent: async () => {}
 }
-const client = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 500)
-const client2 = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 500)
+const client = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 500)
+const client2 = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 500)
 
 beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
@@ -302,7 +308,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= 25; i += 1) {
-            const temp = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -336,7 +342,10 @@ describe('Test Client & Server behavior', () => {
 
         Promise.all(closePromises)
     })
-    it('Multiple Clients: event{ack: true} x 10 --> Server: ack.  Loop random replies', async () => {
+    it('Load Test,  25 Clients: event{ack: true} x 10 --> Server: ack.  Loop random replies', async () => {
+        const numberOfClients = 25
+        const numberOfReqeusts = 10
+
         server.onEvent = (cause, conn, reply, send) => {
             const pause = Math.floor(Math.random() * Math.floor(300))
             return new Promise((resolve) => {
@@ -347,8 +356,8 @@ describe('Test Client & Server behavior', () => {
         const clients: Client[] = []
         const awaitReadys: Promise<any>[] = []
 
-        for (let i = 0; i <= 25; i += 1) {
-            const temp = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+        for (let i = 0; i <= numberOfClients; i += 1) {
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -359,7 +368,7 @@ describe('Test Client & Server behavior', () => {
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
-            for (let i = 0; i < 10; i += 1) {
+            for (let i = 0; i < numberOfReqeusts; i += 1) {
                 const cause = new Event(`test-event`, {
                     acknowledge: true
                 })
@@ -384,6 +393,108 @@ describe('Test Client & Server behavior', () => {
 
         Promise.all(closePromises)
     })
+    it('Load Test,  1 Clients{ack: true} x 500 request/client', async () => {
+        const numberOfClients = 1
+        const eventsPerClient = 500
+
+        server.onEvent = (cause, conn, reply, send) => {
+            const pause = Math.floor(Math.random() * Math.floor(300))
+            return new Promise((resolve) => {
+                setTimeout(resolve, pause)
+            })
+        }
+
+        const clients: Client[] = []
+        const awaitReadys: Promise<any>[] = []
+
+        for (let i = 0; i <= numberOfClients; i += 1) {
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            clients.push(temp)
+            awaitReadys.push(temp.awaitReady())
+        }
+
+        await Promise.all(awaitReadys)
+
+        const promises: Promise<IEvents>[] = []
+        const ids: string[] = []
+
+        clients.forEach((tempClient) => {
+            for (let i = 0; i < eventsPerClient; i += 1) {
+                const cause = new Event(`test-event`, {
+                    acknowledge: true
+                })
+                ids.push(cause.id)
+                const response = tempClient.sendEvent(cause)
+                promises.push(response)
+            }
+        })
+
+        const acks = await Promise.all(promises)
+
+        for (let i = 0; i < acks.length; i += 1) {
+            assert(acks[i], 'Ack cannot be undefined')
+            assert(acks[i].type === 'acknowledgement')
+            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
+        }
+
+        const closePromises: Promise<any>[] = []
+        clients.forEach((tempClient) => {
+            closePromises.push(tempClient.close())
+        })
+
+        Promise.all(closePromises)
+    }).timeout(10000)
+    it('Load Test,  1 Clients{ack: true} x 750 request/client', async () => {
+        const numberOfClients = 1
+        const eventsPerClient = 750
+
+        server.onEvent = (cause, conn, reply, send) => {
+            const pause = Math.floor(Math.random() * Math.floor(300))
+            return new Promise((resolve) => {
+                setTimeout(resolve, pause)
+            })
+        }
+
+        const clients: Client[] = []
+        const awaitReadys: Promise<any>[] = []
+
+        for (let i = 0; i <= numberOfClients; i += 1) {
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            clients.push(temp)
+            awaitReadys.push(temp.awaitReady())
+        }
+
+        await Promise.all(awaitReadys)
+
+        const promises: Promise<IEvents>[] = []
+        const ids: string[] = []
+
+        clients.forEach((tempClient) => {
+            for (let i = 0; i < eventsPerClient; i += 1) {
+                const cause = new Event(`test-event`, {
+                    acknowledge: true
+                })
+                ids.push(cause.id)
+                const response = tempClient.sendEvent(cause)
+                promises.push(response)
+            }
+        })
+
+        const acks = await Promise.all(promises)
+
+        for (let i = 0; i < acks.length; i += 1) {
+            assert(acks[i], 'Ack cannot be undefined')
+            assert(acks[i].type === 'acknowledgement')
+            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
+        }
+
+        const closePromises: Promise<any>[] = []
+        clients.forEach((tempClient) => {
+            closePromises.push(tempClient.close())
+        })
+
+        Promise.all(closePromises)
+    }).timeout(10000)
     it('Load Test,  300 Clients{ack: false} x 400 request/client', async () => {
         const numberOfClients = 200
         const eventsPerClient = 400
@@ -399,7 +510,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -448,7 +559,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new EDC.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -475,6 +586,106 @@ describe('Test Client & Server behavior', () => {
             assert(acks[i], 'Ack cannot be undefined')
             assert(acks[i].type === 'acknowledgement')
             assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
+        }
+
+        const closePromises: Promise<any>[] = []
+        clients.forEach((tempClient) => {
+            closePromises.push(tempClient.close())
+        })
+
+        Promise.all(closePromises)
+    }).timeout(20000)
+    it('Load Test,  12 Clients{ack: true} x 10000 request/client', async () => {
+        const numberOfClients = 12
+        const eventsPerClient = 10000
+
+        server.onEvent = (cause, conn, reply, send) => {
+            const pause = Math.floor(Math.random() * Math.floor(300))
+            return new Promise((resolve) => {
+                setTimeout(resolve, pause)
+            })
+        }
+
+        const clients: Client[] = []
+        const awaitReadys: Promise<any>[] = []
+
+        for (let i = 0; i <= numberOfClients; i += 1) {
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            clients.push(temp)
+            awaitReadys.push(temp.awaitReady())
+        }
+
+        await Promise.all(awaitReadys)
+
+        const promises: Promise<IEvents>[] = []
+        const ids: string[] = []
+
+        clients.forEach((tempClient) => {
+            for (let i = 0; i < eventsPerClient; i += 1) {
+                const cause = new Event(`test-event`, {
+                    acknowledge: true
+                })
+                ids.push(cause.id)
+                const response = tempClient.sendEvent(cause)
+                promises.push(response)
+            }
+        })
+
+        const acks = await Promise.all(promises)
+
+        for (let i = 0; i < acks.length; i += 1) {
+            assert(acks[i], 'Ack cannot be undefined')
+            assert(acks[i].type === 'acknowledgement')
+            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
+        }
+
+        const closePromises: Promise<any>[] = []
+        clients.forEach((tempClient) => {
+            closePromises.push(tempClient.close())
+        })
+
+        Promise.all(closePromises)
+    }).timeout(20000)
+    it('Load Test,  12 Clients{ack: false} x 10000 request/client', async () => {
+        const numberOfClients = 12
+        const eventsPerClient = 10000
+
+        server.onEvent = (cause, conn, reply, send) => {
+            const pause = Math.floor(Math.random() * Math.floor(300))
+            return new Promise((resolve) => {
+                setTimeout(resolve, pause)
+            })
+        }
+
+        const clients: Client[] = []
+        const awaitReadys: Promise<any>[] = []
+
+        for (let i = 0; i <= numberOfClients; i += 1) {
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            clients.push(temp)
+            awaitReadys.push(temp.awaitReady())
+        }
+
+        await Promise.all(awaitReadys)
+
+        const promises: Promise<IEvents>[] = []
+        const ids: string[] = []
+
+        clients.forEach((tempClient) => {
+            for (let i = 0; i < eventsPerClient; i += 1) {
+                const cause = new Event(`test-event`, {
+                    acknowledge: false
+                })
+                ids.push(cause.id)
+                const response = tempClient.sendEvent(cause)
+                promises.push(response)
+            }
+        })
+
+        const acks = await Promise.all(promises)
+
+        for (let i = 0; i < acks.length; i += 1) {
+            assert(!acks[i], 'Ack must be undefined')
         }
 
         const closePromises: Promise<any>[] = []
