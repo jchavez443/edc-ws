@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { IAckEvent, IEvent } from '../interface'
+import { IAckEvent, IEvent } from './interface'
 
 export default class AckEvent implements IAckEvent {
     readonly type: 'acknowledgement' = 'acknowledgement'

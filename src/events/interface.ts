@@ -25,7 +25,7 @@ export interface IErrorEvent extends IEventRoot {
         code: number
         cn: string
         message: string
-        data: {} | null
+        data: any | null
     }
     failed: IEvent<any>
     shared?: ObjMap

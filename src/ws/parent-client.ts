@@ -1,0 +1,140 @@
+/* eslint-disable max-classes-per-file */
+/* eslint-disable class-methods-use-this */
+import WebSocket, { MessageEvent } from 'ws'
+import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
+import { AckEvent, ErrorEvent, Event, IEvent, IEvents } from '../events'
+import { Handlers } from './interfaces'
+import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
+
+export default abstract class ParentClient {
+    private requestedAcks: Map<
+        string,
+        [ws: WebSocket, timeout: NodeJS.Timeout, resolve: (event: IEvents) => void, reject: (reason: any) => void]
+    > = new Map()
+
+    // eslint-disable-next-line no-use-before-define
+    private incomingAcks: AckHandler = new AckHandler()
+
+    protected ackTimeout: number = 5000
+
+    /**
+     * @returns Promise
+     */
+    abstract onEvent: ServerOnEvent | ClientOnEvent
+
+    abstract onError: ServerOnError | ClientOnError
+
+    abstract onAck: ServerOnAck | ClientOnAck
+
+    onConnect: ServerOnConnect | ClientOnConnect = async () => {}
+
+    onClose: ServerOnClose | ClientOnClose = async () => {}
+
+    private preOnEvent(event: IEvents, websocket: WebSocket) {
+        if ((event as IEvent<any>).acknowledge) {
+            this.incomingAcks.add(websocket, event.id)
+        }
+
+        if (event.trigger === undefined || !this.requestedAcks.has(event.trigger)) return
+
+        const tuple = this.requestedAcks.get(event.trigger)
+        if (tuple === undefined) return
+
+        const [ws, ackTimeout, resolve, reject] = tuple
+
+        if (websocket !== ws) {
+            return
+        }
+
+        clearTimeout(ackTimeout)
+        this.requestedAcks.delete(event.trigger)
+
+        if (event.type !== 'error') {
+            resolve(event)
+        } else {
+            reject(new Error((event as ErrorEvent).details.message))
+        }
+    }
+
+    protected async onMessage(ws: WebSocket, msgEvent: MessageEvent) {
+        let event
+        try {
+            event = JSON.parse(msgEvent.data.toString())
+        } catch (e) {
+            console.log(msgEvent.data)
+            return
+        }
+
+        if (!Event.isEvent(event)) {
+            throw new Error('the ws data is not Event data.')
+        }
+
+        this.preOnEvent(event, ws)
+
+        await this.handleEvent(event, ws)
+
+        if (event.acknowledge && this.incomingAcks.has(ws, event.id)) {
+            this.send(ws, new AckEvent(event))
+        }
+    }
+
+    protected send(ws: WebSocket, event: IEvents): Promise<IEvents> {
+        if (event.trigger !== undefined && this.incomingAcks.has(ws, event.trigger)) {
+            this.incomingAcks.delete(ws, event.trigger)
+        }
+
+        return new Promise((resolve, reject) => {
+            if ((event as Event<any>).acknowledge) {
+                const ackTimeout = setTimeout(() => {
+                    this.requestedAcks.delete(event.id)
+                    reject(new Error(`Timeout waiting for ack for ${event.id}`))
+                }, this.ackTimeout)
+                this.requestedAcks.set(event.id, [ws, ackTimeout, resolve, reject])
+
+                ws.send(JSON.stringify(event))
+            } else {
+                ws.send(JSON.stringify(event))
+                resolve() // we do not have the returned event.  ack not requested
+            }
+        })
+    }
+
+    protected cleanUp(ws: WebSocket) {
+        this.incomingAcks.remove(ws)
+    }
+
+    protected abstract handleEvent(event: any, ws: WebSocket): Promise<void>
+
+    public abstract sendEvent(...args: any): Promise<IEvents>
+
+    public abstract close(): Promise<void>
+}
+
+class AckHandler {
+    private incomingAckSets: Map<WebSocket, Set<string>> = new Map()
+
+    add(ws: WebSocket, uuid: string) {
+        let idSet = this.incomingAckSets.get(ws)
+
+        if (!idSet) {
+            idSet = new Set()
+            this.incomingAckSets.set(ws, idSet)
+        }
+
+        idSet.add(uuid)
+    }
+
+    has(ws: WebSocket, uuid: string) {
+        const idSet = this.incomingAckSets.get(ws)
+        return idSet?.has(uuid)
+    }
+
+    delete(ws: WebSocket, uuid: string) {
+        const idSet = this.incomingAckSets.get(ws)
+        idSet?.delete(uuid)
+    }
+
+    remove(ws: WebSocket) {
+        this.incomingAckSets.delete(ws)
+    }
+}

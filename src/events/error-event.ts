@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { IErrorEvent, IEvent } from '../interface'
+import { IErrorEvent, IEvent } from './interface'
 
 export default class ErrorEvent implements IErrorEvent {
     readonly type: 'error' = 'error'
@@ -8,7 +8,7 @@ export default class ErrorEvent implements IErrorEvent {
 
     readonly trigger: string
 
-    details: { code: number; cn: string; message: string; data: {} | null }
+    details: { code: number; cn: string; message: string; data: any | null }
 
     readonly failed: IEvent<any>
 

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { EventProps, IEvent } from '../interface'
+import { EventProps, IEvent } from './interface'
 
 export default class Event<T> implements IEvent<T> {
     type: string

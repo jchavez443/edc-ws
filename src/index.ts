@@ -1,24 +1,8 @@
-import { EventProps, IAckEvent, IErrorEvent, IEvent, IEvents } from './interface'
-import { AckEvent, ErrorEvent, Event, Events } from './events'
-import { Client, ClientHandlers, Handlers, IConnectionManager, Server, ServerHandlers } from './ws'
+import { Client, Server } from './ws'
 
-export {
-    Client,
-    ClientHandlers,
-    Handlers,
-    IConnectionManager,
-    Server,
-    ServerHandlers,
-    AckEvent,
-    ErrorEvent,
-    Event,
-    Events,
-    EventProps,
-    IAckEvent,
-    IErrorEvent,
-    IEvent,
-    IEvents
-}
+export * from './ws'
+export * from './events'
+export * from './events/interface'
 
 export default {
     Client,
