@@ -8,7 +8,8 @@ import Edc, {
     IEvents,
     Client,
     DefaultConnectionManager,
-    AckedErrorEvent
+    AckedErrorEvent,
+    TimeoutError
 } from '../src'
 
 const port = 8082
@@ -88,12 +89,17 @@ describe('Test Client & Server behavior', () => {
             const ack = await client.sendEvent(event)
             assert(false, 'Error should be trown if server returns error --> client')
         } catch (e) {
-            const err = e as AckedErrorEvent
-            assert(err.message, 'The error hase a message')
-            assert(err.failed, 'Error need the failed event')
-            assert(err.trigger, 'Error needs a trigger')
-            assert(err.details, 'Errro needs details')
-            assert(err.name === 'AckedErrorEvent', 'Name of error should be "AckedErrorEvent"')
+            if (e instanceof AckedErrorEvent) {
+                assert(e.message, 'The error hase a message')
+                assert(e.failed, 'Error need the failed event')
+                assert(e.trigger, 'Error needs a trigger')
+                assert(e.details, 'Errro needs details')
+                assert(e.name === 'AckedErrorEvent', 'Name of error should be "AckedErrorEvent"')
+            } else if (e instanceof TimeoutError) {
+                assert(false, 'The request should not have timed out')
+            } else {
+                assert(false, 'The error should of been of type AckedErrorEvent')
+            }
         }
     })
     it('Client: event{ack: true} --> Server: event', async () => {
@@ -272,7 +278,6 @@ describe('Test Client & Server behavior', () => {
 
         assert(res[0].trigger === cause.id, 'The trigger needs to be the ID')
         assert(res[1].trigger === cause2.id, 'The trigger needs to be the ID')
-
     })
     it('Single Client: event{ack: true} --> Server: ack.  Loop random replies', async () => {
         server.onEvent = (event, conn, reply, send) => {

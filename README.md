@@ -3,9 +3,9 @@
 ## EDC-WS Server/Clients
 Is a server-clinet pakage that uses websockets to enable EDC.
 
-* [Examples](https://www.example.com)
-* [Server Init](#server-init)
-* [Client Init](#server-init)
+* [Github Examples](https://www.example.com)
+* [Server Examples](#server-init)
+* [Client Examples](#server-init)
 
 ## What is The Event Driven Communications (EDC) Protocol?
 Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of events.
@@ -13,6 +13,9 @@ Is a JSON based communications protocol that allows for the communication of eve
 The concept that one event is the cause of a new event is a first class citizen in the EDC protocol.  This allows for the logical grouping of events based on the cause-effect chain by tie together UUIDs.  In additions, a chain of events logically share data that is common to each event in the chain.  This allows the detail of the events to live seperate from the shared chain data.
 
 * [See Event Driven Communications](#event-driven-communications-edc-components)
+
+> **Note:** [Acknowledge](#acknowledge) has a few nuances and controls if the `sendEvent()` resolves instantly or waits for a reply.  If `"acknowledge": true` then the promise will reslove after a valid reply, or reject after a timeout | [Error Event](#error-event)
+> See this for more on [Acknowledge](#acknowledge-and-flow)
 
 ```
               Event Chain
@@ -51,7 +54,7 @@ const server = new Edc.Server(port, {
 Send an Event (Server)
 ```ts
 const cause = new Event('event-type', {
-    acknowledge: true,
+    acknowledge: true, // Note** that this is 'true'
     details: {
         test: 'prop',
         count: 23
@@ -65,11 +68,17 @@ const cause = new Event('event-type', {
 try {
     const event = await server.sendEvent(connection, cause)
 } catch (e) {
-    const err = e as AckedErrorEvent
     console.log(err.message)
+    if (e instanceof AckedErrorEvent) {
+       console.log(`Failed Event Id:  ${e.trigger}`)
+    } else if (e instanceof TimeoutError) {
+        console.log(`Event timedout after  ${e.timeout}ms`)
+    } else {
+        // Handler other
+    }
 }
 ```
-> **Note:** if the `cause` Event was set to `"acknowledge": false` then no `AckedErrorEvent` could be thrown.  An `AckedErrorEvent` is only thrown on synchronous `"acknowledge": true` `sendEvents()` that return an event `"type": "error"`.  This is done because the expectation for a synchronous acknowledgement should be another event or ack and not an error.
+> **Note:** if the `cause` Event was set to **`"acknowledge": false`** then no [`AckedErrorEvent`](#AckedErrorEvent) or [`TimeoutError`](#TimeoutError) could be thrown.  
 
 Client initilization
 ```ts
@@ -93,7 +102,7 @@ const client = new Edc.Client('ws://websocket.server.com', {
 Send an Event (Client)
 ```ts
 const cause = new Event('event-type', {
-    acknowledge: true,
+    acknowledge: true, // Note** that this is 'true'
     details: {
         test: 'prop',
         count: 23
@@ -107,11 +116,17 @@ const cause = new Event('event-type', {
 try {
     const event = await client.sendEvent(cause)
 } catch (e) {
-    const err = e as AckedErrorEvent
     console.log(err.message)
+    if (e instanceof AckedErrorEvent) {
+       console.log(`Failed Event Id:  ${e.trigger}`)
+    } else if (e instanceof TimeoutError) {
+        console.log(`Event timedout after  ${e.timeout}ms`)
+    } else {
+        // Handler other
+    }
 }
 ```
-> **Note:** if the `cause` Event was set to `"acknowledge": false` then no `AckedErrorEvent` could be thrown.  An `AckedErrorEvent` is only thrown on synchronous `"acknowledge": true` `sendEvents()` that return an event `"type": "error"`.  This is done because the expectation for a synchronous acknowledgement should be another event/ack and not an error.
+> **Note:** if the `cause` Event was set to **`"acknowledge": false`** then no [`AckedErrorEvent`](#AckedErrorEvent) or [`TimeoutError`](#TimeoutError) could be thrown.
 
 Create a `new Event()` from a `cause: Event`
 ```ts
@@ -159,6 +174,10 @@ const event = new Event('event-type-2').inherit(cause)
             - [shared](#shared)
             - [failed](#failed)
     - [Server Connection Manager](#server-connection-manager)
+    - [Acknowledge and Flow](#acknowledge-and-flow)
+        - [TimeoutError](#timeouterror)
+        - [AckedErrorEvent](#ackederrorevent)
+        - [Multiple Synchronous Events](#multiple-synchronous-events)
 
 <!-- /TOC -->
 
@@ -256,7 +275,7 @@ The trigger is set to the event that triggered the new event.  `new event.trigge
 The concept is meant to build a chain of events with `events` becoming the `cuase` of `new events`.  An `event` is not limited to causing only a linear chain.  It is possible for one `cause` to trigger multiple `events`.  `cause --> event1 & event2`
 
 #### acknowledge
-If an event is sent with the `"acknowledge": true` flag then the recieving system MUST reply with an `event`, `error`, or `acknowledgement` with the `trigger` field set to the `id` of the sent event.
+If an event is sent with the `"acknowledge": true` flag then the recieving system MUST reply with an `event`, `error`, or `acknowledgement` with the `trigger` field set to the `id` of the sent event. Multiple replies of different events is allowed.
 
 Example:
 
@@ -404,3 +423,19 @@ const connection: ConnectionInfo = connectionManager.getConnection('connection-i
 
 server.sendEvent(connection, event)
 ```
+
+## Acknowledge and Flow
+
+The requirement that `"acknowledge": true` event MUST have a reply leads to two thrown errors `AckedErrorEvent` and `TimeoutError`.  In addition, `"acknowledge": false` events are asynchronous even if `await` is used.  This is because the promise will resolve instantly on the `sendEvent()` as `Promise<undefined>`.
+
+### TimeoutError
+
+The `TimeoutError` is thrown on `"acknowledge": true` if no non-error reply is recived before the set client/server timeout is set.  Since the `"acknowledge": true` events expect a reply and it is not possible to wait forever it is logical that there must be a timeout and that it would be a error by the system.
+
+### AckedErrorEvent
+
+The `AckedErrorEvent` is throw if on `"acknowledge": true` if an event of type `"error"` is recieved in response to the sent event.  The motivation for this is to allow the handling of events that were expected or NEEDED to be successful in order to continue.
+
+### Multiple Synchronous Events
+
+Acknowledge is key in sending multiple synchronous events in which the order of recieval matters.  If event `A` must be before event `B`, then event `A` should be sent with `"acknowledge": true` this would gurantee an acknowledging reply that `A` was recieved and that `B` could now be sent.  This would be true for any length of synchronous dependant events.  `A` before `B`, `B` before `C`, `C` before `D`, etc.... `[A, B, C, D, ...]`
