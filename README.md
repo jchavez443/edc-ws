@@ -62,8 +62,14 @@ const cause = new Event('event-type', {
     }
 })
 
-const event = await server.sendEvent(connection, cause)
+try {
+    const event = await server.sendEvent(connection, cause)
+} catch (e) {
+    const err = e as AckedErrorEvent
+    console.log(err.message)
+}
 ```
+> **Note:** if the `cause` Event was set to `"acknowledge": false` then no `AckedErrorEvent` could be thrown.  An `AckedErrorEvent` is only thrown on synchronous `"acknowledge": true` `sendEvents()` that return an event `"type": "error"`.  This is done because the expectation for a synchronous acknowledgement should be another event or ack and not an error.
 
 Client initilization
 ```ts
@@ -98,8 +104,14 @@ const cause = new Event('event-type', {
     }
 })
 
-const event = await client.sendEvent(cause) 
+try {
+    const event = await client.sendEvent(cause)
+} catch (e) {
+    const err = e as AckedErrorEvent
+    console.log(err.message)
+}
 ```
+> **Note:** if the `cause` Event was set to `"acknowledge": false` then no `AckedErrorEvent` could be thrown.  An `AckedErrorEvent` is only thrown on synchronous `"acknowledge": true` `sendEvents()` that return an event `"type": "error"`.  This is done because the expectation for a synchronous acknowledgement should be another event/ack and not an error.
 
 Create a `new Event()` from a `cause: Event`
 ```ts
