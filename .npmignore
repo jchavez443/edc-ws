@@ -1,0 +1,11 @@
+node_modules
+.vscode
+src
+.eslintrc.js
+.gitigonore
+.prettierrc.js
+debug.js
+tsconfig.json
+test
+
+/out/test

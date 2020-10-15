@@ -1,25 +1,137 @@
 # Event Driven Communications (EDC) w/ WebSockets
 
 ## EDC-WS 
-Is a server-clinet pakage that uses websockets to endable EDC.
+Is a server-clinet pakage that uses websockets to enable EDC.
 
-## Event Driven Communications (EDC) protcool
-Is a JSON based communications protocol that follows these rules:
+## What is The Event Driven Communications (EDC) Protocol?
+Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of evnets.
+
+The concept that one event is the cause of a new event is a first class citizen in the EDC protocol.  This allows for the logical grouping of events based on the cause-effect chain by tie together UUIDs.  In additions, a chain of events logically share data that is common to each event in the chain.  This allows the detail of the events to live seperate from the shared chain data.
+
+## Server Init
+
+```ts
+import Edc, { Event } from 'edc-ws'
+
+const server = new Edc.Server(port, {
+    onEvent: async (cause, info, reply, send) => {
+
+        const event = new Event('reaction').inherit(cause)
+
+        reply(event) // Replies to the connection that sent the "cause" Event
+        
+        send(getSomeConnection(), event)
+    },
+    onAck: async (cause, info, reply, send) => {
+        // Handle events.type = "acknowledgement"
+    },
+    onError: async (cause, info, reply, send) => {
+        // Handle events.type = "error"
+    }
+})
+```
+
+## Server Send
+
+```ts
+const cause = new Event('event-type', {
+    acknowledge: true,
+    details: {
+        test: 'prop',
+        count: 23
+    },
+    shared: {
+        id: 'shared id',
+        step: 3
+    }
+})
+
+const event = await server.sendEvent(connection, cause)
+```
+
+## Client Init
+```ts
+import Edc, { Event } from 'edc-ws'
+
+const client = new Edc.Client('ws://websocket.server.com', {
+    onEvent: async (cause, reply) => {
+        const event = new Event('event-type').inherit(cause)
+
+        reply(event)
+    },
+    onAck: async (cause, reply) => {
+        // Handle events.type = "acknowledgement"
+    },
+    onError: async (cause, reply) => {
+        // Handle events.type = "error"
+    }
+})
+```
+
+## Client Send
+
+```ts
+const cause = new Event('event-type', {
+    acknowledge: true,
+    details: {
+        test: 'prop',
+        count: 23
+    },
+    shared: {
+        id: 'shared id',
+        step: 3
+    }
+})
+
+const event = await client.sendEvent(cause) 
+```
+
+## Table of Contents
+
+<!-- TOC -->
+
+- [Event Driven Communications (EDC) w/ WebSockets](#event-driven-communications-edc-w-websockets)
+    - [EDC-WS](#edc-ws)
+    - [What is The Event Driven Communications (EDC) Protocol?](#what-is-the-event-driven-communications-edc-protocol)
+    - [Server Init](#server-init)
+    - [Server Send](#server-send)
+    - [Client Init](#client-init)
+    - [Client Send](#client-send)
+    - [Table of Contents](#table-of-contents)
+    - [Event Driven Communications (EDC) Components](#event-driven-communications-edc-components)
+        - [Event](#event)
+        - [Acknowledgement Event](#acknowledgement-event)
+        - [Error Event](#error-event)
+            - [Error Event Details](#error-event-details)
+        - [Fields](#fields)
+            - [type](#type)
+            - [id](#id)
+            - [trigger](#trigger)
+            - [acknowledge](#acknowledge)
+                - [Request](#request)
+                - [Responses](#responses)
+            - [details](#details)
+            - [shared](#shared)
+            - [failed](#failed)
+
+<!-- /TOC -->
+
+## Event Driven Communications (EDC) Components
 
 ### Event
 An Event is a JSON object defined as
 
-Note: for `"type"` `error` and `acknowledgement` are reserved for **Error Event** and **Acknowledgement Event** respectivley
+Note: `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event](#error-event) and [Acknowledgement Event](#acknowledgement-event) respectivley
 
 ```ts
 {
-    "type": string,                //Event type 
-    "id": string,                  //UUID for the event,
+    "type": string,                // Event type 
+    "id": string,                  // UUID for the event,
     "trigger":? string,            // UUID of the event triggering this event
-    "acknowledge":? boolean,       // The event must be acknowledged
+    "acknowledge":? boolean,       // A reply is expected (syncronous) if true
     "details":? {},                // Details of this event
     "shared":? {},                 // Shared information from the chain of events, (modifiable),
-    "failed":? Event               // If a error occurs on an event that did not request acknowledgement
+    "failed":? Event               // The event that caused the error
 }
 ```
 
@@ -36,24 +148,28 @@ Note: for `"type"` `error` and `acknowledgement` are reserved for **Error Event*
 ### Error Event
 
 ```ts
-Error Event 
 {
     "type": "error",
     "id": "71e92430-77b6-48ad-899c-7a5fc769f328",
     "trigger": "af0f0d3e-5c48-4265-9f3e-e37a21ff84c1",
-    "details": { error details },
+    "details": { 
+        "code": 4083, 
+        "cn": "common-error",
+        "message": "Simple message about error",
+        "data": {}
+    },
     "shared": { shared data from erroring event },
     "failed": { erroring event }
 }
 ```
 
 #### Error Event Details
-The `details` of the error event MUST include
-* `cn` the common name of the error
-* `code` the number for the error
-* `message` the message to help understand the error
+The `"details"` of the error event MUST include
+* `"cn"` the common name of the error
+* `"code"` the number for the error
+* `"message"` the message to help understand the error
 
-A `data` field is allowed for any additional information about the error
+A `"data"` field is allowed for any additional information about the error.
 
 ```ts
 details: { 
@@ -68,7 +184,21 @@ details: {
 ### Fields
 
 #### type
-The type field represent the event type.  It can be any string except `error` and `acknowldegement` which are reserved.
+The type field represent the event type.  It can be any string except `"error"` and `"acknowldegement"` which are reserved.
+
+Examples:
+```json
+    "type": "mouse-moved"
+```
+```json
+    "type": "transcripted"
+```
+```json
+    "type": "request-action"
+```
+```json
+    "type": "initiate-action"
+```
 
 #### id
 The id field is a UUID and MUST be unique for **all** events
@@ -83,6 +213,7 @@ If an event is sent with the `"acknowledge": true` flag then the recieving syste
 
 Example:
 
+##### Request
 ```json
 A --> B
 {
@@ -90,7 +221,9 @@ A --> B
     "id": "0a385c23-4b65-4d9f-8c78-6b7bf5ad0530",
     "acknowledge": true,
 }
---------------------------------------------------
+```
+##### Responses
+```json
 B --> A
 
 Ack Event
@@ -99,7 +232,9 @@ Ack Event
     "id": "71e92430-77b6-48ad-899c-7a5fc769f328",
     "trigger": "0a385c23-4b65-4d9f-8c78-6b7bf5ad0530"
 }
+```
 -- Or --
+```json
 Error Event 
 {
     "type": "error",
@@ -117,7 +252,9 @@ Error Event
         "acknowledge": true,
     }
 }
+```
 -- Or --
+```json
 Responding Event
 {
     "type": "next-event",
