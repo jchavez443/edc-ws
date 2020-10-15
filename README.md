@@ -26,6 +26,7 @@ The concept that one event is the cause of a new event is a first class citizen 
 
 ## Examples
 
+Server initialization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
@@ -100,7 +101,7 @@ const cause = new Event('event-type', {
 const event = await client.sendEvent(cause) 
 ```
 
-`new Event` from `cause Event`
+Create a `new Event()` from a `cause: Event`
 ```ts
 const cause = new Event('event-type', {
     acknowledge: true,

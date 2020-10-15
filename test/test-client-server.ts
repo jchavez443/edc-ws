@@ -7,7 +7,8 @@ import Edc, {
     ErrorEvent,
     IEvents,
     Client,
-    DefaultConnectionManager
+    DefaultConnectionManager,
+    AckedErrorEvent
 } from '../src'
 
 const port = 8082
@@ -87,7 +88,12 @@ describe('Test Client & Server behavior', () => {
             const ack = await client.sendEvent(event)
             assert(false, 'Error should be trown if server returns error --> client')
         } catch (e) {
-            assert(e.message, 'The error hase a message')
+            const err = e as AckedErrorEvent
+            assert(err.message, 'The error hase a message')
+            assert(err.failed, 'Error need the failed event')
+            assert(err.trigger, 'Error needs a trigger')
+            assert(err.details, 'Errro needs details')
+            assert(err.name === 'AckedErrorEvent', 'Name of error should be "AckedErrorEvent"')
         }
     })
     it('Client: event{ack: true} --> Server: event', async () => {
