@@ -24,7 +24,7 @@ The concept that one event is the cause of a new event is a first class citizen 
 |-----------------------------------------|
 ```
 
-## Server Init
+## Examples
 
 ```ts
 import Edc, { Event } from 'edc-ws'
@@ -47,8 +47,7 @@ const server = new Edc.Server(port, {
 })
 ```
 
-## Server Send
-
+Send an Event (Server)
 ```ts
 const cause = new Event('event-type', {
     acknowledge: true,
@@ -65,7 +64,7 @@ const cause = new Event('event-type', {
 const event = await server.sendEvent(connection, cause)
 ```
 
-## Client Init
+Client initilization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
@@ -84,8 +83,7 @@ const client = new Edc.Client('ws://websocket.server.com', {
 })
 ```
 
-## Client Send
-
+Send an Event (Client)
 ```ts
 const cause = new Event('event-type', {
     acknowledge: true,
@@ -102,6 +100,27 @@ const cause = new Event('event-type', {
 const event = await client.sendEvent(cause) 
 ```
 
+`new Event` from `cause Event`
+```ts
+const cause = new Event('event-type', {
+    acknowledge: true,
+    details: {
+        test: 'prop',
+        count: 23
+    },
+    shared: {
+        id: 'shared id',
+        step: 3
+    }
+})
+
+const event = new Event('event-type-2').inherit(cause)
+
+// event.trigger === cause.id
+// event.shared === cause.shared
+
+```
+
 ## Table of Contents
 
 <!-- TOC -->
@@ -109,10 +128,7 @@ const event = await client.sendEvent(cause)
 - [Event Driven Communications (EDC) w/ WebSockets](#event-driven-communications-edc-w-websockets)
     - [EDC-WS Server/Clients](#edc-ws-serverclients)
     - [What is The Event Driven Communications (EDC) Protocol?](#what-is-the-event-driven-communications-edc-protocol)
-    - [Server Init](#server-init)
-    - [Server Send](#server-send)
-    - [Client Init](#client-init)
-    - [Client Send](#client-send)
+    - [Examples](#examples)
     - [Table of Contents](#table-of-contents)
     - [Event Driven Communications (EDC) Components](#event-driven-communications-edc-components)
         - [Event](#event)
@@ -138,7 +154,7 @@ const event = await client.sendEvent(cause)
 ### Event
 An Event is a JSON object defined as
 
-> Note: `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event](#error-event) and [Acknowledgement Event](#acknowledgement-event) respectivley
+> **Note:** `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event](#error-event) and [Acknowledgement Event](#acknowledgement-event) respectivley
 
 ```ts
 {
@@ -287,9 +303,9 @@ The details is any JSON object and would hold the details for the OCCURING event
 #### shared
 The shared property is any JSON object.  It is inteded to be used as a property that a `chain of events` share in common.
 
-When an event is `triggered` by a `cause` then it SHOULD set the `trigger` to the `cause.id` and copy the `cause.shared` data to the `new event`.  The shared data is not immutable and can evolve.  
+When an event is `triggered` by a `cause` then it SHOULD set the `trigger` to the `cause.id` and copy the `cause.shared` data to the `new event.shared`.  The shared data is not immutable and can evolve.  
 
-Examples would include a connectionId that events share incommon, a callId for a phone call, a survey id, or start time or a `chain of events`.
+Examples would include a connection-Id that events share incommon, a call-Id for a phone call, a survey-Id, or a start time for a `chain of events`.
 
 ```json
 A --> B
@@ -364,7 +380,7 @@ Is only used with the `"type": "error"` event.  It MUST be a copy of the event t
 
 It is possible to extend the abstract class `ConnectionManager` to implement you own connection manager for the Server.  The `ConnectionManager` organizes the server WebSocket connections.  This allows the Server to `push` events to a client.  The Server instance will automatically add connections to the connection manager if it properly extends the `ConnectionManager` class.  Calling the `server.sendEvent()` will send the event to the connection supplied.
 
-> Note: Connections are automatically added & removed form the Server's Connection Manager
+> **Note:** Connections are automatically added & removed form the Server's Connection Manager
 
 ```ts
 const connectionManager: ConnectionManager = new ConnectionManagerTest()
