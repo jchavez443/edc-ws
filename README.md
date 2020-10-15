@@ -1,12 +1,18 @@
 # Event Driven Communications (EDC) w/ WebSockets
 
-## EDC-WS 
+## EDC-WS Server/Clients
 Is a server-clinet pakage that uses websockets to enable EDC.
+
+* [Examples](www.example.com)
+* [Server Init](#server-init)
+* [Client Init](#server-init)
 
 ## What is The Event Driven Communications (EDC) Protocol?
 Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of events.
 
 The concept that one event is the cause of a new event is a first class citizen in the EDC protocol.  This allows for the logical grouping of events based on the cause-effect chain by tie together UUIDs.  In additions, a chain of events logically share data that is common to each event in the chain.  This allows the detail of the events to live seperate from the shared chain data.
+
+* [See Event Driven Communications](#event-driven-communications-edc-components)
 
 ```
               Event Chain
@@ -101,7 +107,7 @@ const event = await client.sendEvent(cause)
 <!-- TOC -->
 
 - [Event Driven Communications (EDC) w/ WebSockets](#event-driven-communications-edc-w-websockets)
-    - [EDC-WS](#edc-ws)
+    - [EDC-WS Server/Clients](#edc-ws-serverclients)
     - [What is The Event Driven Communications (EDC) Protocol?](#what-is-the-event-driven-communications-edc-protocol)
     - [Server Init](#server-init)
     - [Server Send](#server-send)
@@ -123,6 +129,7 @@ const event = await client.sendEvent(cause)
             - [details](#details)
             - [shared](#shared)
             - [failed](#failed)
+    - [Server Connection Manager](#server-connection-manager)
 
 <!-- /TOC -->
 
@@ -348,4 +355,19 @@ Is only used with the `"type": "error"` event.  It MUST be a copy of the event t
         "acknowledge": true,
     }
 }
+```
+
+## Server Connection Manager
+
+It is possible to extend the abstract class `ConnectionManager` to implement you own connection manager for the Server.  The `ConnectionManager` organizes the server WebSocket connections.  This allows the Server to `push` events to a client.  The Server instance will automatically add connections to the connection manager if it properly extends the `ConnectionManager` class.  Calling the `server.sendEvent()` will send the event to the connection supplied.
+
+```ts
+const connectionManager: ConnectionManager = new ConnectionManagerTest()
+
+const server = Edc.Server(port, serverHandlers, connectionManager)
+
+const connection: ConnectionInfo = connectionManager.getConnection('connection-id')
+
+server.sendEvent(connection, event)
+
 ```
