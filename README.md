@@ -4,8 +4,8 @@
 Is a server-clinet pakage that uses websockets to enable EDC.
 
 * [Github Examples](https://www.example.com)
-* [Server Examples](#server-init)
-* [Client Examples](#server-init)
+* [Server Examples](#server-initilization)
+* [Client Examples](#server-initilization)
 
 ## What is The Event Driven Communications (EDC) Protocol?
 Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of events.
@@ -29,7 +29,7 @@ The concept that one event is the cause of a new event is a first class citizen 
 
 ## Examples
 
-Server initialization
+## Server initialization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
@@ -80,7 +80,7 @@ try {
 ```
 > **Note:** if the `cause` Event was set to **`"acknowledge": false`** then no [`AckedErrorEvent`](#AckedErrorEvent) or [`TimeoutError`](#TimeoutError) could be thrown.  
 
-Client initilization
+## Client initilization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
@@ -157,6 +157,8 @@ const event = new Event('event-type-2').inherit(cause)
     - [EDC-WS Server/Clients](#edc-ws-serverclients)
     - [What is The Event Driven Communications (EDC) Protocol?](#what-is-the-event-driven-communications-edc-protocol)
     - [Examples](#examples)
+    - [Server initialization](#server-initialization)
+    - [Client initilization](#client-initilization)
     - [Table of Contents](#table-of-contents)
     - [Event Driven Communications (EDC) Components](#event-driven-communications-edc-components)
         - [Event](#event)
