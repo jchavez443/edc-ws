@@ -3,7 +3,7 @@
 ## EDC-WS Server/Clients
 Is a server-clinet pakage that uses websockets to enable EDC.
 
-* [Examples](www.example.com)
+* [Examples](https://www.example.com)
 * [Server Init](#server-init)
 * [Client Init](#server-init)
 
@@ -138,7 +138,7 @@ const event = await client.sendEvent(cause)
 ### Event
 An Event is a JSON object defined as
 
-Note: `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event](#error-event) and [Acknowledgement Event](#acknowledgement-event) respectivley
+> Note: `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event](#error-event) and [Acknowledgement Event](#acknowledgement-event) respectivley
 
 ```ts
 {
@@ -181,12 +181,13 @@ Note: `"type": ` `"error"` and `"acknowledgement"` are reserved for [Error Event
 ```
 
 #### Error Event Details
+
 The `"details"` of the error event MUST include
 * `"cn"` the common name of the error
 * `"code"` the number for the error
 * `"message"` the message to help understand the error
 
-A `"data"` field is allowed for any additional information about the error.
+* `"data"` this field is allowed for any additional information about the error.
 
 ```ts
 details: { 
@@ -303,7 +304,8 @@ A --> B
         "step": 0
     }
 }
------------------------------------------------------------------
+```
+```json
 B --> A
 // Note the shared data is copied
 {
@@ -318,7 +320,8 @@ B --> A
         "step": 0
     }
 }
-----------------------------------------------------------------
+```
+```json
 A --> B
 // Note that the shared.step was increased
 {
@@ -361,6 +364,8 @@ Is only used with the `"type": "error"` event.  It MUST be a copy of the event t
 
 It is possible to extend the abstract class `ConnectionManager` to implement you own connection manager for the Server.  The `ConnectionManager` organizes the server WebSocket connections.  This allows the Server to `push` events to a client.  The Server instance will automatically add connections to the connection manager if it properly extends the `ConnectionManager` class.  Calling the `server.sendEvent()` will send the event to the connection supplied.
 
+> Note: Connections are automatically added & removed form the Server's Connection Manager
+
 ```ts
 const connectionManager: ConnectionManager = new ConnectionManagerTest()
 
@@ -369,5 +374,4 @@ const server = Edc.Server(port, serverHandlers, connectionManager)
 const connection: ConnectionInfo = connectionManager.getConnection('connection-id')
 
 server.sendEvent(connection, event)
-
 ```
