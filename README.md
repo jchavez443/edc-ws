@@ -4,9 +4,19 @@
 Is a server-clinet pakage that uses websockets to enable EDC.
 
 ## What is The Event Driven Communications (EDC) Protocol?
-Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of evnets.
+Is a JSON based communications protocol that allows for the communication of events while enabling the sharing of common data between a chain of events.
 
 The concept that one event is the cause of a new event is a first class citizen in the EDC protocol.  This allows for the logical grouping of events based on the cause-effect chain by tie together UUIDs.  In additions, a chain of events logically share data that is common to each event in the chain.  This allows the detail of the events to live seperate from the shared chain data.
+
+```
+              Event Chain
+|-----------------------------------------|
+|             shared data                 |
+|    |event-1|-->|event-2|-->|event-3|    |
+|        |                                |
+|        |-->|event-N|                    |
+|-----------------------------------------|
+```
 
 ## Server Init
 
@@ -204,7 +214,7 @@ Examples:
 The id field is a UUID and MUST be unique for **all** events
 
 #### trigger
-The trigger is set to the event that triggered the new event.  `new event.trigger = cause.id` 
+The trigger is set to the event that triggered the new event.  `new event.trigger = cause.id`
 
 The concept is meant to build a chain of events with `events` becoming the `cuase` of `new events`.  An `event` is not limited to causing only a linear chain.  It is possible for one `cause` to trigger multiple `events`.  `cause --> event1 & event2`
 
