@@ -89,14 +89,15 @@ describe('Test Client & Server behavior', () => {
             const ack = await client.sendEvent(event)
             assert(false, 'Error should be trown if server returns error --> client')
         } catch (e) {
-            if (e instanceof AckedErrorEvent) {
+            if (e instanceof TimeoutError) {
+                assert(false, 'The request should not have timed out')
+            } else if (e instanceof AckedErrorEvent) {
                 assert(e.message, 'The error hase a message')
                 assert(e.failed, 'Error need the failed event')
                 assert(e.trigger, 'Error needs a trigger')
-                assert(e.details, 'Errro needs details')
+                assert(e.cn, 'Errro needs "cn"')
+                assert(e.code, 'Errro needs "cn"')
                 assert(e.name === 'AckedErrorEvent', 'Name of error should be "AckedErrorEvent"')
-            } else if (e instanceof TimeoutError) {
-                assert(false, 'The request should not have timed out')
             } else {
                 assert(false, 'The error should of been of type AckedErrorEvent')
             }

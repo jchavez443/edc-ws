@@ -25,7 +25,11 @@ export class AckedErrorEvent extends Error {
 
     shared?: {}
 
-    details: any
+    data: any
+
+    cn: string
+
+    code: number
 
     constructor(error: ErrorEvent) {
         super(`Caught ErrorEvent:  ${error.details.message}`)
@@ -35,6 +39,8 @@ export class AckedErrorEvent extends Error {
         this.failed = error.failed
         this.id = error.id
         this.trigger = error.trigger
-        this.details = error.details
+        this.data = error.details.data
+        this.cn = error.details.cn
+        this.code = error.details.code
     }
 }
