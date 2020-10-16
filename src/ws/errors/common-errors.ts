@@ -17,7 +17,7 @@ export class TimeoutError extends Error {
 }
 
 export class AckedErrorEvent extends Error {
-    failed: IEvent<any>
+    failed: IEvent<any, any>
 
     id: string
 
@@ -25,7 +25,7 @@ export class AckedErrorEvent extends Error {
 
     shared?: {}
 
-    data: any
+    data?: any
 
     cn: string
 

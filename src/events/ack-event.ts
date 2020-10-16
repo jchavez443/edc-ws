@@ -10,7 +10,7 @@ export default class AckEvent implements IAckEvent {
 
     readonly trigger: string
 
-    constructor(...args: [ackEvent: IAckEvent] | [casue: IEvent<any>]) {
+    constructor(...args: [ackEvent: IAckEvent] | [casue: IEvent<any, any>]) {
         if (args[0].type === 'acknowledgement') {
             const ackEvent = <IAckEvent>args[0]
 

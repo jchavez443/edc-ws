@@ -8,9 +8,9 @@ export default class ErrorEvent implements IErrorEvent {
 
     readonly trigger: string
 
-    details: { code: number; cn: string; message: string; data: any | null }
+    details: { code: number; cn: string; message: string; data?: any | null }
 
-    readonly failed: IEvent<any>
+    readonly failed: IEvent<any, any>
 
     readonly shared?: {} | {}[] | undefined
 
@@ -18,7 +18,7 @@ export default class ErrorEvent implements IErrorEvent {
 
     constructor(
         ...args:
-            | [failedEvent: IEvent<any>, deatils: { code: number; cn: string; message: string; data: {} | null }]
+            | [failedEvent: IEvent<any, any>, deatils: { code: number; cn: string; message: string; data?: {} | null }]
             | [errorEvent: IErrorEvent]
     ) {
         if (args.length === 2) {

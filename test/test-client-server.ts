@@ -7,9 +7,9 @@ import Edc, {
     ErrorEvent,
     IEvents,
     Client,
-    DefaultConnectionManager,
     AckedErrorEvent,
-    TimeoutError
+    TimeoutError,
+    BasicAuth
 } from '../src'
 
 const port = 8082
@@ -19,18 +19,28 @@ const serverHandlers: ServerHandlers = {
     onError: async () => {},
     onEvent: async () => {},
 
-    onConnect: async (server, connectionInfo, event) => {}
+    onConnect: async (connection, auth, event, server) => {},
+    authenticate: (request) => {
+        const authHeader = request.headers.authorization || ''
+
+        const auth = new BasicAuth(authHeader)
+        auth.authenticated = true
+
+        return auth
+    }
 }
 
-const server = new Edc.Server(port, serverHandlers, new DefaultConnectionManager(), 500)
+const server = new Edc.Server(port, serverHandlers, {
+    timeout: 500
+})
 
 const clientHandlers: ClientHandlers = {
     onAck: async () => {},
     onError: async () => {},
     onEvent: async () => {}
 }
-const client = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 500)
-const client2 = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 500)
+const client = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
+const client2 = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
 
 beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
@@ -66,7 +76,7 @@ describe('Test Client & Server behavior', () => {
         assert(ack.trigger === event.id, 'Acknowledgemnt trigger != cause.id')
     })
     it('Client: event{ack: true} --> Server: error', async () => {
-        server.onEvent = async (cause, info, reply) => {
+        server.onEvent = async (cause, connection, reply) => {
             reply(
                 new ErrorEvent(cause, {
                     cn: 'cn',
@@ -104,7 +114,7 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Client: event{ack: true} --> Server: event', async () => {
-        server.onEvent = async (cause, info, reply) => {
+        server.onEvent = async (cause, connection, reply) => {
             reply(new Event('test-event').inherit(cause))
         }
 
@@ -120,7 +130,7 @@ describe('Test Client & Server behavior', () => {
         assert(ack.type === 'test-event', 'Wasnt an event.type = "test-event"')
     })
     it('Client: event{ack: true} --> Server: no-reply', async () => {
-        server.onEvent = (cause, info, reply) => {
+        server.onEvent = (cause, connection, reply) => {
             return new Promise((resolve, reject) => {})
         }
 
@@ -137,7 +147,7 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Client: event{ack: false} --> Server: event', async () => {
-        server.onEvent = async (cause, info, reply) => {
+        server.onEvent = async (cause, connection, reply) => {
             reply(new Event('test-event').inherit(cause))
         }
 
@@ -150,7 +160,7 @@ describe('Test Client & Server behavior', () => {
         assert(!ack, 'Acknowledgemnt needs to be undefined')
     })
     it('Client: event{ack: false} --> Server: no-reply', async () => {
-        server.onEvent = async (cause, info, reply, send) => {
+        server.onEvent = async (cause, connection, reply, send) => {
             return new Promise((resolve, reject) => {})
         }
 
@@ -168,8 +178,8 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const info = server.connectionManager.getAllConnections()[0]
-        const ack = await server.sendEvent(info, event)
+        const connection = server.wss.clients.values().next().value
+        const ack = await server.sendEvent(connection, event)
 
         assert(ack, 'Acknowledgemnt undefined')
         assert(ack.trigger === event.id, 'Ack trigger == event')
@@ -190,8 +200,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const info = server.connectionManager.getAllConnections()[0]
-            const error = await server.sendEvent(info, event)
+            const connection = server.wss.clients.values().next().value
+            const error = await server.sendEvent(connection, event)
             assert(error || !error, 'Error should have been thrown by server')
         } catch (e) {
             assert(e, 'An Error should have been thrown')
@@ -207,8 +217,8 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const info = server.connectionManager.getAllConnections()[0]
-        const event = await server.sendEvent(info, cause)
+        const connection = server.wss.clients.values().next().value
+        const event = await server.sendEvent(connection, cause)
         assert(event, 'An event should have been returned')
         assert(event.trigger === cause.id)
     })
@@ -222,8 +232,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const info = server.connectionManager.getAllConnections()[0]
-            const event = await server.sendEvent(info, cause)
+            const connection = server.wss.clients.values().next().value
+            const event = await server.sendEvent(connection, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
             assert(e, 'A timeout error should have been thrown')
@@ -238,7 +248,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: false
         })
 
-        const info = server.connectionManager.getAllConnections()[0]
+        const info = server.wss.clients.values().next().value
         const event = await server.sendEvent(info, cause)
         assert(!event, 'An event should NOT be returned')
     })
@@ -252,7 +262,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const info = server.connectionManager.getAllConnections()[0]
+            const info = server.wss.clients.values().next().value
             const event = await server.sendEvent(info, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
@@ -320,7 +330,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= 25; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -369,7 +379,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -420,7 +430,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -471,7 +481,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -522,7 +532,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 1000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -571,7 +581,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -622,7 +632,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -673,7 +683,7 @@ describe('Test Client & Server behavior', () => {
         const awaitReadys: Promise<any>[] = []
 
         for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, 50000)
+            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }

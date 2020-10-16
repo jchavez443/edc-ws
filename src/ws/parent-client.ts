@@ -31,7 +31,7 @@ export default abstract class ParentClient {
     onClose: ServerOnClose | ClientOnClose = async () => {}
 
     private preOnEvent(event: IEvents, websocket: WebSocket) {
-        if ((event as IEvent<any>).acknowledge) {
+        if ((event as IEvent<any, any>).acknowledge) {
             this.incomingAcks.add(websocket, event.id)
         }
 
@@ -84,7 +84,7 @@ export default abstract class ParentClient {
         }
 
         return new Promise((resolve, reject) => {
-            if ((event as Event<any>).acknowledge) {
+            if ((event as Event<any, any>).acknowledge) {
                 const ackTimeout = setTimeout(() => {
                     this.requestedAcks.delete(ws, event.id)
                     reject(new TimeoutError(`waiting for event.id: ${event.id}`))

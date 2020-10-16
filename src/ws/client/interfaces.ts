@@ -19,7 +19,7 @@ export interface EdcClient extends ParentClient {
 
 export type ClientSendEvent = (event: Events) => Promise<IEvents>
 
-export type ClientOnEvent = (event: IEvent<any>, reply: ClientSendEvent) => Promise<any>
+export type ClientOnEvent = (event: IEvent<any, any>, reply: ClientSendEvent) => Promise<any>
 
 export type ClientOnError = (event: IErrorEvent, reply: ClientSendEvent) => Promise<any>
 
@@ -35,4 +35,9 @@ export interface ClientHandlers {
     onAck: ClientOnAck
     onConnect?: ClientOnConnect
     onClose?: ClientOnClose
+}
+
+export interface ClientOptions {
+    auth?: string
+    timeout?: number
 }

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { EventProps, IEvent } from './interface'
 
-export default class Event<T> implements IEvent<T> {
+export default class Event<T, K> implements IEvent<T, K> {
     type: string
 
     readonly edc: '1.0' = '1.0'
@@ -14,9 +14,9 @@ export default class Event<T> implements IEvent<T> {
 
     details?: T
 
-    shared: { [key: string]: any } = {}
+    shared?: K
 
-    constructor(...args: [type: string] | [event: IEvent<T>] | [type: string, props: EventProps<T>]) {
+    constructor(...args: [type: string] | [event: IEvent<T, K>] | [type: string, props: EventProps<T, K>]) {
         if (typeof args[0] === 'string') {
             ;[this.type] = args
             this.id = uuidv4()
@@ -39,7 +39,7 @@ export default class Event<T> implements IEvent<T> {
         }
     }
 
-    inherit(cause: IEvent<T>) {
+    inherit(cause: IEvent<T, K>) {
         this.trigger = cause.id
         if (cause.shared) this.shared = cause.shared
         return this

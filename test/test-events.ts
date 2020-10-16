@@ -13,10 +13,10 @@ describe('Test Event Objects', () => {
             }
         })
 
-        const event = new Event('inherit-test').inherit(cause)
+        const event = new Event<any, any>('inherit-test').inherit(cause)
 
         assert(event.trigger === cause.id, 'new event.trigger must == cause.id')
-        assert(event.shared.id === sharedId, 'The new event must copy the shared data')
+        assert(event.shared?.id === sharedId, 'The new event must copy the shared data')
 
         assert(cause.type === type, 'Type must be set during construction')
     })

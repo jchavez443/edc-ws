@@ -429,11 +429,11 @@ The requirement that `"acknowledge": true` event MUST have a reply leads to two 
 
 ### TimeoutError
 
-The `TimeoutError` is thrown on `"acknowledge": true` if no non-error reply is recived before the set client/server timeout is set.  Since the `"acknowledge": true` events expect a reply and it is not possible to wait forever it is logical that there must be a timeout and that it would be a error by the system.
+The `TimeoutError` is thrown on `"acknowledge": true` if no non-error reply is recived before the after client/server timeout is reached.  Since the `"acknowledge": true` events expects a reply and it is not possible to wait forever it is logical that there must be a timeout and that it would be a error by the system.
 
 ### AckedErrorEvent
 
-The `AckedErrorEvent` is throw if on `"acknowledge": true` if an event of type `"error"` is recieved in response to the sent event.  The motivation for this is to allow the handling of events that were expected or NEEDED to be successful in order to continue.
+The `AckedErrorEvent` is throw on `"acknowledge": true` event if an event of type `"error"` is recieved in response to the sent event.  The motivation for this is to allow the handling of events that were expected or NEEDED to be successful in order to continue.
 
 ### Multiple Synchronous Events
 

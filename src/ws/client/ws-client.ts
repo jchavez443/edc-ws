@@ -7,6 +7,7 @@ import {
     ClientHandlers,
     ClientOnClose,
     ClientOnConnect,
+    ClientOptions,
     EdcClient
 } from './interfaces'
 
@@ -24,7 +25,7 @@ export default class Client extends ParentClient implements EdcClient {
 
     onClose: ClientOnClose = async () => {}
 
-    constructor(url: string, handlers: ClientHandlers, timeout?: number) {
+    constructor(url: string, handlers: ClientHandlers, options?: ClientOptions) {
         super()
 
         if (handlers.onConnect) this.onConnect = handlers.onConnect
@@ -35,9 +36,11 @@ export default class Client extends ParentClient implements EdcClient {
         this.onError = handlers.onError
         this.onEvent = handlers.onEvent
 
-        if (timeout) this.ackTimeout = timeout
+        if (options?.timeout) this.ackTimeout = options?.timeout
 
-        this.ws = new WebSocket(url)
+        this.ws = new WebSocket(url, {
+            auth: options?.auth
+        })
 
         this.ws.onopen = (event) => {
             this.onConnect(this, this.ws, event)

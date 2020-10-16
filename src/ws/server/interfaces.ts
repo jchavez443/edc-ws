@@ -1,9 +1,10 @@
 /* eslint-disable no-use-before-define */
-import { IncomingMessage } from 'http'
+import http, { IncomingMessage } from 'http'
+import https from 'https'
 import WebSocket from 'ws'
 import { IAckEvent, IErrorEvent, IEvent, IEvents, Events } from '../../events'
 import ParentClient from '../parent-client'
-import { ConnectionInfo } from './connections'
+import { Auth } from './authentication/interfaces'
 
 export interface EdcServer extends ParentClient {
     sendEvent: ServerSendEvent
@@ -14,41 +15,49 @@ export interface EdcServer extends ParentClient {
     onAck: ServerOnAck
     onConnect: ServerOnConnect
     onClose: ServerOnClose
+
+    authenticate: ServerAuthenticate
 }
 
-export type ServerSendEvent = (connectionInfo: ConnectionInfo, event: Events) => Promise<IEvents>
+export type ServerAuthenticate = (request: IncomingMessage) => Auth
+
+export type ServerSendEvent = (connection: WebSocket, event: Events) => Promise<IEvents>
 export type ServerReplyEvent = (event: Events) => Promise<IEvents>
 
 export type ServerBroadCastEvent = (event: Events) => void
 
 export type ServerOnEvent = (
-    event: IEvent<any>,
-    connectionInfo: ConnectionInfo,
+    event: IEvent<any, any>,
+    connection: WebSocket,
     reply: ServerReplyEvent,
-    send: ServerSendEvent
+    send: ServerSendEvent,
+    server: EdcServer
 ) => Promise<any>
 
 export type ServerOnError = (
     event: IErrorEvent,
-    connectionInfo: ConnectionInfo,
+    connection: WebSocket,
     reply: ServerReplyEvent,
-    send: ServerSendEvent
+    send: ServerSendEvent,
+    server: EdcServer
 ) => Promise<any>
 
 export type ServerOnAck = (
     event: IAckEvent,
-    connectionInfo: ConnectionInfo,
+    connection: WebSocket,
     reply: ServerReplyEvent,
-    send: ServerSendEvent
+    send: ServerSendEvent,
+    server: EdcServer
 ) => Promise<any>
 
 export type ServerOnConnect = (
-    server: EdcServer,
-    connectionInfo: ConnectionInfo,
-    event: IncomingMessage
+    connection: WebSocket,
+    auth: Auth,
+    event: IncomingMessage,
+    server: EdcServer
 ) => Promise<any>
 
-export type ServerOnClose = (server: EdcServer, ws: WebSocket, event: WebSocket.CloseEvent) => Promise<any>
+export type ServerOnClose = (event: WebSocket.CloseEvent, ws: WebSocket, server: EdcServer) => Promise<any>
 
 export interface ServerHandlers {
     onEvent: ServerOnEvent
@@ -56,4 +65,11 @@ export interface ServerHandlers {
     onAck: ServerOnAck
     onConnect?: ServerOnConnect
     onClose?: ServerOnClose
+    authenticate?: ServerAuthenticate
+}
+
+export interface ServerOptions {
+    timeout?: number
+    htpServerOptions?: http.ServerOptions | https.ServerOptions
+    https?: boolean
 }
