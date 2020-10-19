@@ -1,11 +1,12 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable class-methods-use-this */
+import crypto from 'crypto'
 import WebSocket, { MessageEvent } from 'ws'
 import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
 import { AckEvent, ErrorEvent, Event, IEvent, IEvents } from '../events'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
-import { AckedErrorEvent, TimeoutError } from './errors'
+import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
@@ -30,10 +31,38 @@ export default abstract class ParentClient {
 
     onClose: ServerOnClose | ClientOnClose = async () => {}
 
+    protected async onMessage(ws: WebSocket, msgEvent: MessageEvent) {
+        let event
+        try {
+            event = JSON.parse(msgEvent.data.toString())
+        } catch (e) {
+            console.log(msgEvent.data)
+            // Invalid JSON reply
+            this.send(ws, new InvalidJsonErrorEvent(msgEvent.data.toString()))
+            return
+        }
+
+        if (!Event.isEvent(event)) {
+            // Invalid Event Object
+            this.send(ws, new InvalidEventErrorEvent(msgEvent.data.toString()))
+            return
+        }
+
+        this.preOnEvent(event, ws)
+
+        await this.handleEvent(event, ws)
+
+        if (event.acknowledge && this.incomingAcks.has(ws, event.id)) {
+            this.send(ws, new AckEvent(event))
+        }
+    }
+
     private preOnEvent(event: IEvents, websocket: WebSocket) {
         if ((event as IEvent<any, any>).acknowledge) {
             this.incomingAcks.add(websocket, event.id)
         }
+
+        const eventHash = crypto.createHash('md5').update(JSON.stringify(event)).digest('hex')
 
         if (event.trigger === undefined || !this.requestedAcks.has(websocket, event.trigger)) return
 
@@ -53,28 +82,6 @@ export default abstract class ParentClient {
             resolve(event)
         } else {
             reject(new AckedErrorEvent(event as ErrorEvent))
-        }
-    }
-
-    protected async onMessage(ws: WebSocket, msgEvent: MessageEvent) {
-        let event
-        try {
-            event = JSON.parse(msgEvent.data.toString())
-        } catch (e) {
-            console.log(msgEvent.data)
-            return
-        }
-
-        if (!Event.isEvent(event)) {
-            throw new Error('the ws data is not Event data.')
-        }
-
-        this.preOnEvent(event, ws)
-
-        await this.handleEvent(event, ws)
-
-        if (event.acknowledge && this.incomingAcks.has(ws, event.id)) {
-            this.send(ws, new AckEvent(event))
         }
     }
 

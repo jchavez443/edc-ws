@@ -5,8 +5,6 @@ interface IEventRoot {
     trigger?: string
 }
 
-type ObjMap = { [key: string]: any }
-
 export interface IEvent<T, K> extends IEventRoot {
     acknowledge?: boolean
     details?: T
@@ -18,17 +16,17 @@ export interface IAckEvent extends IEventRoot {
     trigger: string
 }
 
+export interface IErrorDetails {
+    code: number
+    cn: string
+    message: string
+    failed: string
+    data?: any | null
+}
+
 export interface IErrorEvent extends IEventRoot {
     type: 'error'
-    trigger: string
-    details: {
-        code: number
-        cn: string
-        message: string
-        data?: any | null
-    }
-    failed: IEvent<any, any>
-    shared?: ObjMap
+    details: IErrorDetails
 }
 
 export interface EventProps<T, K> {

@@ -1,5 +1,6 @@
 /* eslint-disable max-classes-per-file */
-import { ErrorEvent, IEvent } from '../../events'
+import { v4 as uuidv4 } from 'uuid'
+import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from '../../events'
 
 export class TimeoutError extends Error {
     public timeout: number | undefined
@@ -21,7 +22,7 @@ export class AckedErrorEvent extends Error {
 
     id: string
 
-    trigger: string
+    trigger?: string
 
     shared?: {}
 
@@ -42,5 +43,58 @@ export class AckedErrorEvent extends Error {
         this.data = error.details.data
         this.cn = error.details.cn
         this.code = error.details.code
+    }
+}
+
+export class InvalidJsonErrorEvent implements ErrorEvent {
+    readonly type: 'error' = 'error'
+
+    readonly edc: '1.0' = '1.0'
+
+    details: IErrorDetails
+
+    id: string
+
+    constructor(failedEvent: string) {
+        this.id = uuidv4()
+        this.details = {
+            code: 32700,
+            cn: 'Parse error',
+            message: 'Invalid Json',
+            failed: failedEvent
+        }
+    }
+}
+
+export class InvalidEventErrorEvent implements ErrorEvent {
+    readonly type: 'error' = 'error'
+
+    readonly edc: '1.0' = '1.0'
+
+    details: IErrorDetails
+
+    readonly id: string
+
+    readonly trigger?: string
+
+    constructor(arg: string | IEvent<any, any>) {
+        this.id = uuidv4()
+
+        if (typeof arg === 'string') {
+            this.details = {
+                code: 32600,
+                cn: 'Invalid Request',
+                message: 'The JSON sent is not a valid Event object.',
+                failed: arg
+            }
+        } else {
+            this.trigger = arg.id
+            this.details = {
+                code: 32600,
+                cn: 'Invalid Request',
+                message: 'The JSON sent is not a valid Event object.',
+                failed: JSON.stringify(arg)
+            }
+        }
     }
 }
