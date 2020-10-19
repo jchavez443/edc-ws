@@ -1,12 +1,17 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable class-methods-use-this */
-import crypto from 'crypto'
+import Ajv from 'ajv'
 import WebSocket, { MessageEvent } from 'ws'
+import { EventSchema, ErrorEventSchema } from './json-schema'
 import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
 import { AckEvent, ErrorEvent, Event, IEvent, IEvents } from '../events'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
 import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
+
+const ajv = new Ajv()
+const eventValidator = ajv.compile(EventSchema)
+const errorEventValidator = ajv.compile(ErrorEventSchema)
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
@@ -42,7 +47,7 @@ export default abstract class ParentClient {
             return
         }
 
-        if (!Event.isEvent(event)) {
+        if (!this.validateJson(event)) {
             // Invalid Event Object
             this.send(ws, new InvalidEventErrorEvent(msgEvent.data.toString()))
             return
@@ -57,12 +62,21 @@ export default abstract class ParentClient {
         }
     }
 
+    private validateJson(jsObj: any): boolean {
+        const result = eventValidator(jsObj)
+
+        if (result && jsObj.type === 'error') {
+            const res2 = errorEventValidator(jsObj)
+            return res2
+        }
+
+        return result
+    }
+
     private preOnEvent(event: IEvents, websocket: WebSocket) {
         if ((event as IEvent<any, any>).acknowledge) {
             this.incomingAcks.add(websocket, event.id)
         }
-
-        const eventHash = crypto.createHash('md5').update(JSON.stringify(event)).digest('hex')
 
         if (event.trigger === undefined || !this.requestedAcks.has(websocket, event.trigger)) return
 

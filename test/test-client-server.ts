@@ -9,7 +9,8 @@ import Edc, {
     Client,
     AckedErrorEvent,
     TimeoutError,
-    BasicAuth
+    BasicAuth,
+    InvalidJsonErrorEvent
 } from '../src'
 
 const port = 8082
@@ -77,14 +78,13 @@ describe('Test Client & Server behavior', () => {
     })
     it('Client: event{ack: true} --> Server: error', async () => {
         server.onEvent = async (cause, connection, reply) => {
-            reply(
-                new ErrorEvent(cause, {
-                    cn: 'cn',
-                    code: 400,
-                    data: null,
-                    message: 'This is the error'
-                })
-            )
+            const error = new ErrorEvent(cause, {
+                cn: 'cn',
+                code: 400,
+                data: null,
+                message: 'This is the error'
+            })
+            reply(error)
         }
 
         client.onError = async (cause) => {
@@ -268,6 +268,98 @@ describe('Test Client & Server behavior', () => {
         } catch (e) {
             assert(e, 'A timeout error should have been thrown')
         }
+    })
+
+    it('Server: Invalid Request --> Client: Invalid Request Error', async () => {
+        const badJson = '{ error: not json }'
+
+        const trip = new Promise((resolve, reject) => {
+            server.onError = async (cause, reply) => {
+                try {
+                    assert(cause.details.code === 32600, 'code should match Invalid JSON code')
+                    assert(cause.details.failed === `"${badJson}"`)
+                    resolve()
+                } catch (e) {
+                    reject(e.message)
+                }
+            }
+        })
+
+        try {
+            const connection = server.wss.clients.values().next().value
+            // @ts-ignore // Need to ignore for this test
+            const ack = await server.sendEvent(connection, badJson)
+            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+        } catch (e) {
+            assert(false, 'No error should have made it here.  Should be in client.onError ')
+        }
+        await trip.catch((msg) => {
+            assert(false, msg)
+        })
+    })
+    it('Server: Invalid Request --> Client: Invalid Request Error V2', async () => {
+        const badObject = {
+            test: 'this is not needed',
+            test2: 'we are missing some items'
+        }
+
+        const trip = new Promise((resolve, reject) => {
+            server.onError = async (cause, reply) => {
+                try {
+                    assert(cause.details.code === 32600, 'code should match Invalid Event code')
+                    assert(cause.details.failed === JSON.stringify(badObject))
+                    resolve()
+                } catch (e) {
+                    reject(e.message)
+                }
+            }
+        })
+
+        try {
+            const connection = server.wss.clients.values().next().value
+            // @ts-ignore // Need to ignore for this test
+            const ack = await server.sendEvent(connection, badObject)
+            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+        } catch (e) {
+            assert(false, 'No error should have made it here.  Should be in server.onError ')
+        }
+        await trip.catch((msg) => {
+            assert(false, msg)
+        })
+    })
+    it('Server: Invalid Request --> Client: Invalid Error Request', async () => {
+        const badObject = {
+            edc: '1.0',
+            id: 'id',
+            type: 'error',
+            details: {
+                missing: 'should have code for Error Object'
+            }
+        }
+
+        const trip = new Promise((resolve, reject) => {
+            server.onError = async (cause, reply) => {
+                try {
+                    assert(cause.details.code === 32600, 'code should match Invalid Event code')
+                    assert(cause.details.failed === JSON.stringify(badObject))
+                    resolve()
+                } catch (e) {
+                    reject(e.message)
+                }
+            }
+        })
+
+        try {
+            const connection = server.wss.clients.values().next().value
+            // @ts-ignore // Need to ignore for this test
+            const ack = await server.sendEvent(connection, badObject)
+            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+        } catch (e) {
+            assert(false, 'No error should have made it here.  Should be in server.onError ')
+        }
+        await trip.catch((msg) => {
+            assert(false, msg)
+        })
     })
 
     it('Multiple Clients: event{ack: true} --> Server: ack', async () => {
@@ -616,7 +708,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         Promise.all(closePromises)
-    }).timeout(20000)
+    }).timeout(60000)
     it('Load Test,  12 Clients{ack: true} x 10000 request/client', async () => {
         const numberOfClients = 12
         const eventsPerClient = 10000
@@ -667,7 +759,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         Promise.all(closePromises)
-    }).timeout(20000)
+    }).timeout(60000)
     it('Load Test,  12 Clients{ack: false} x 10000 request/client', async () => {
         const numberOfClients = 12
         const eventsPerClient = 10000
@@ -716,5 +808,5 @@ describe('Test Client & Server behavior', () => {
         })
 
         Promise.all(closePromises)
-    }).timeout(20000)
+    }).timeout(60000)
 })

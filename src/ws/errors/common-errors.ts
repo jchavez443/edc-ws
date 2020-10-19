@@ -18,8 +18,6 @@ export class TimeoutError extends Error {
 }
 
 export class AckedErrorEvent extends Error {
-    failed: IEvent<any, any>
-
     id: string
 
     trigger?: string
@@ -32,17 +30,19 @@ export class AckedErrorEvent extends Error {
 
     code: number
 
+    failed: string
+
     constructor(error: ErrorEvent) {
         super(`Caught ErrorEvent:  ${error.details.message}`)
 
         this.name = 'AckedErrorEvent'
 
-        this.failed = error.failed
         this.id = error.id
         this.trigger = error.trigger
         this.data = error.details.data
         this.cn = error.details.cn
         this.code = error.details.code
+        this.failed = error.details.failed
     }
 }
 

@@ -56,9 +56,12 @@ describe('Test Event Objects', () => {
 
         assert(event.trigger === cause.id, 'new event.trigger must == cause.id')
         assert(event.type === 'error', 'event.type must be "error"')
-        assert(event.failed, 'failed event must be included in error')
-        assert(event.failed.id === cause.id, 'Failed event id must match cause')
-        assert(event.failed.shared?.id === sharedId, 'Failed event must include the shared data')
+        assert(event.details.failed, 'failed event must be included in error')
+
+        const failedEvent = JSON.parse(event.details.failed)
+
+        assert(failedEvent.id === cause.id, 'Failed event id must match cause')
+        assert(failedEvent.shared?.id === sharedId, 'Failed event must include the shared data')
 
         assert(event.details, 'Error Event must incude the details')
         assert(event.details.data?.test === 'test', 'Error Event must incude the details.data.test')

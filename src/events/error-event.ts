@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { IErrorDetails, IErrorEvent } from './interface'
+import { IErrorDetails, IErrorEvent, IEvent } from './interface'
 
 export default class ErrorEvent implements IErrorEvent {
     readonly type: 'error' = 'error'
@@ -12,12 +12,21 @@ export default class ErrorEvent implements IErrorEvent {
 
     readonly id: string
 
-    constructor(arg: IErrorDetails | IErrorEvent) {
-        if ((arg as IErrorDetails).code) {
+    constructor(
+        ...args:
+            | [IErrorDetails]
+            | [IErrorEvent]
+            | [failedEvent: IEvent<any, any>, details: { code: number; cn: string; message: string; data?: any | null }]
+    ) {
+        if (args.length === 2) {
             this.id = uuidv4()
-            this.details = <IErrorDetails>arg
+            this.trigger = args[0].id
+            this.details = { ...args[1], ...{ failed: JSON.stringify(args[0]) } }
+        } else if ((args[0] as IErrorDetails).code) {
+            this.id = uuidv4()
+            this.details = <IErrorDetails>args[0]
         } else {
-            const errorEvent = <IErrorEvent>arg
+            const errorEvent = <IErrorEvent>args[0]
             this.trigger = errorEvent.trigger
             this.details = errorEvent.details
             this.id = errorEvent.id
