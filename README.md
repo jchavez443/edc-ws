@@ -3,6 +3,7 @@
 ## EDC-WS Server/Clients
 Is a server-clinet pakage that uses websockets to enable EDC.
 
+Examples:
 * [Guessing Game Example](https://github.com/jchavez443/edc-ws-guess-game-example)
 * [Chat Room Example](https://github.com/jchavez443/edc-ws-chat-example)
 
@@ -177,6 +178,9 @@ const event = new Event('event-type-2').inherit(cause)
         - [TimeoutError](#timeouterror)
         - [AckedErrorEvent](#ackederrorevent)
         - [Multiple Synchronous Events](#multiple-synchronous-events)
+    - [Generic Events](#generic-events)
+        - [Event<T, K>](#eventt-k)
+        - [ErrorEvent<T>](#erroreventt)
 
 <!-- /TOC -->
 
@@ -433,3 +437,42 @@ The `AckedErrorEvent` is throw on `"acknowledge": true` event if an event of typ
 ### Multiple Synchronous Events
 
 Acknowledge is key in sending multiple synchronous events in which the order of recieval matters.  If event `A` must be before event `B`, then event `A` should be sent with `"acknowledge": true` this would gurantee an acknowledging reply that `A` was recieved and that `B` could now be sent.  This would be true for any length of synchronous dependant events.  `A` before `B`, `B` before `C`, `C` before `D`, etc.... `[A, B, C, D, ...]`
+
+## Generic Events 
+
+### Event<T, K>
+The type `T` represents the type that `details` is.  While the type `K` represents the type that the `shared` property is.
+
+```ts
+type T = { foo: string }
+type K = { baz: string }
+
+const event = new Event<T, K>('event-type', {
+    details: {
+        // type T
+        foo: 'bar'
+    },
+    shared: {
+        // type K
+        baz: 'taz'
+    }
+})
+```
+
+### ErrorEvent<T>
+The type `T` for the ErrorEvent represents the type of `error.details.data`
+
+```ts
+type T = { foo: string }
+
+const error = new ErrorEvent<T>({
+    cn: 'cn',
+    code: 9999,
+    message: 'simple message',
+    failed: failedEventStr,
+    data: {
+        // type T
+        foo: 'bar'
+    }
+})
+```
