@@ -7,5 +7,6 @@ export * from './errors'
 
 export * from './interfaces'
 export * from './parent-client'
+export * from './json-schema'
 
 export { Client, Server }

@@ -6,6 +6,8 @@
   "types": "out/src/index.d.ts",
   "scripts": {
     "test": "mocha out/test/*.js",
+    "loadtest": "mocha out/test/load/*.js",
+    "fulltest": "npm run test && npm run loadtest",
     "lint": "eslint \"./src/**/*.ts\" --fix",
     "build": " npm run lint && tsc --sourcemap",
     "deploy": "npm run build && serverless deploy"

@@ -35,7 +35,7 @@ export type ServerOnEvent = (
 ) => Promise<any>
 
 export type ServerOnError = (
-    event: IErrorEvent,
+    event: IErrorEvent<any>,
     connection: WebSocket,
     reply: ServerReplyEvent,
     send: ServerSendEvent,

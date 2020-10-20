@@ -21,7 +21,7 @@ export type ClientSendEvent = (event: Events) => Promise<IEvents>
 
 export type ClientOnEvent = (event: IEvent<any, any>, reply: ClientSendEvent) => Promise<any>
 
-export type ClientOnError = (event: IErrorEvent, reply: ClientSendEvent) => Promise<any>
+export type ClientOnError = (event: IErrorEvent<any>, reply: ClientSendEvent) => Promise<any>
 
 export type ClientOnAck = (event: IAckEvent, reply: ClientSendEvent) => Promise<any>
 

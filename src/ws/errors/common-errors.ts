@@ -1,9 +1,13 @@
 /* eslint-disable max-classes-per-file */
 import { v4 as uuidv4 } from 'uuid'
-import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from '../../events'
+import { ErrorEvent, IErrorDetails, IEvent } from '../../events'
 
 export class TimeoutError extends Error {
     public timeout: number | undefined
+
+    static type: string = 'TimeoutError'
+
+    public readonly type: string
 
     constructor(message?: string, timeout?: number) {
         if (timeout) {
@@ -12,19 +16,17 @@ export class TimeoutError extends Error {
             super(`Timeout: ${message}`)
         }
 
-        this.name = 'TimeoutError'
+        this.type = TimeoutError.type
         this.timeout = timeout
     }
 }
 
-export class AckedErrorEvent extends Error {
+export class AckedErrorEvent<T> extends Error {
     id: string
 
     trigger?: string
 
-    shared?: {}
-
-    data?: any
+    data?: T
 
     cn: string
 
@@ -32,7 +34,7 @@ export class AckedErrorEvent extends Error {
 
     failed: string
 
-    constructor(error: ErrorEvent) {
+    constructor(error: ErrorEvent<T>) {
         super(`Caught ErrorEvent:  ${error.details.message}`)
 
         this.name = 'AckedErrorEvent'
@@ -46,12 +48,12 @@ export class AckedErrorEvent extends Error {
     }
 }
 
-export class InvalidJsonErrorEvent implements ErrorEvent {
+export class InvalidJsonErrorEvent implements ErrorEvent<any> {
     readonly type: 'error' = 'error'
 
     readonly edc: '1.0' = '1.0'
 
-    details: IErrorDetails
+    details: IErrorDetails<any>
 
     id: string
 
@@ -66,12 +68,12 @@ export class InvalidJsonErrorEvent implements ErrorEvent {
     }
 }
 
-export class InvalidEventErrorEvent implements ErrorEvent {
+export class InvalidEventErrorEvent implements ErrorEvent<any> {
     readonly type: 'error' = 'error'
 
     readonly edc: '1.0' = '1.0'
 
-    details: IErrorDetails
+    details: IErrorDetails<any>
 
     readonly id: string
 

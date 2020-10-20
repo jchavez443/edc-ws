@@ -49,7 +49,7 @@ export default abstract class ParentClient {
 
         if (!this.validateJson(event)) {
             // Invalid Event Object
-            this.send(ws, new InvalidEventErrorEvent(msgEvent.data.toString()))
+            this.send(ws, new InvalidEventErrorEvent(event))
             return
         }
 
@@ -95,7 +95,7 @@ export default abstract class ParentClient {
         if (event.type !== 'error') {
             resolve(event)
         } else {
-            reject(new AckedErrorEvent(event as ErrorEvent))
+            reject(new AckedErrorEvent(event as ErrorEvent<any>))
         }
     }
 
@@ -108,7 +108,7 @@ export default abstract class ParentClient {
             if ((event as Event<any, any>).acknowledge) {
                 const ackTimeout = setTimeout(() => {
                     this.requestedAcks.delete(ws, event.id)
-                    reject(new TimeoutError(`waiting for event.id: ${event.id}`))
+                    reject(new TimeoutError(`waiting for event.id: ${event.id}`, this.ackTimeout))
                 }, this.ackTimeout)
                 this.requestedAcks.add(ws, event.id, [ws, ackTimeout, resolve, reject])
 

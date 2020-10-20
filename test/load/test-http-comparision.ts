@@ -3,7 +3,7 @@ import { expect, assert } from 'chai'
 import express from 'express'
 import bodyParser from 'body-parser'
 import axios, { AxiosResponse } from 'axios'
-import { AckEvent, Event } from '../src'
+import { AckEvent, Event } from '../../src'
 
 const port = 8085
 const app = express()

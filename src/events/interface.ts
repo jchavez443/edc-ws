@@ -16,17 +16,17 @@ export interface IAckEvent extends IEventRoot {
     trigger: string
 }
 
-export interface IErrorDetails {
+export interface IErrorDetails<T> {
     code: number
     cn: string
     message: string
     failed: string
-    data?: any | null
+    data?: T
 }
 
-export interface IErrorEvent extends IEventRoot {
+export interface IErrorEvent<T> extends IEventRoot {
     type: 'error'
-    details: IErrorDetails
+    details: IErrorDetails<T>
 }
 
 export interface EventProps<T, K> {
@@ -36,4 +36,4 @@ export interface EventProps<T, K> {
     shared?: K
 }
 
-export type IEvents = IErrorEvent | IAckEvent | IEvent<any, any>
+export type IEvents = IErrorEvent<any> | IAckEvent | IEvent<any, any>

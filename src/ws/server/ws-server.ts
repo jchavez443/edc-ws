@@ -98,7 +98,7 @@ export default class Server extends ParentClient implements EdcServer {
 
         switch (event.type) {
             case 'error':
-                await this.onError(event as IErrorEvent, ws, reply, send, this)
+                await this.onError(event as IErrorEvent<any>, ws, reply, send, this)
                 break
             case 'acknowledgement':
                 await this.onAck(event as IAckEvent, ws, reply, send, this)

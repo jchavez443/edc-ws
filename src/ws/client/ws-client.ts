@@ -61,7 +61,7 @@ export default class Client extends ParentClient implements EdcClient {
 
         switch (event.type) {
             case 'error':
-                await this.onError(event as IErrorEvent, reply)
+                await this.onError(event as IErrorEvent<any>, reply)
                 break
             case `acknowledgement`:
                 await this.onAck(event as IAckEvent, reply)

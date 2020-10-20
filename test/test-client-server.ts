@@ -1,5 +1,5 @@
 import 'mocha'
-import { expect, assert } from 'chai'
+import { assert } from 'chai'
 import Edc, {
     ClientHandlers,
     Event,
@@ -9,8 +9,7 @@ import Edc, {
     Client,
     AckedErrorEvent,
     TimeoutError,
-    BasicAuth,
-    InvalidJsonErrorEvent
+    BasicAuth
 } from '../src'
 
 const port = 8082
@@ -78,10 +77,13 @@ describe('Test Client & Server behavior', () => {
     })
     it('Client: event{ack: true} --> Server: error', async () => {
         server.onEvent = async (cause, connection, reply) => {
-            const error = new ErrorEvent(cause, {
+            const error = new ErrorEvent<{ type: string; test: number }>(cause, {
                 cn: 'cn',
                 code: 400,
-                data: null,
+                data: {
+                    type: 'adsf',
+                    test: 1
+                },
                 message: 'This is the error'
             })
             reply(error)
@@ -102,12 +104,16 @@ describe('Test Client & Server behavior', () => {
             if (e instanceof TimeoutError) {
                 assert(false, 'The request should not have timed out')
             } else if (e instanceof AckedErrorEvent) {
-                assert(e.message, 'The error hase a message')
+                assert(e.message, 'The error have a message')
                 assert(e.failed, 'Error need the failed event')
                 assert(e.trigger, 'Error needs a trigger')
                 assert(e.cn, 'Errro needs "cn"')
                 assert(e.code, 'Errro needs "cn"')
                 assert(e.name === 'AckedErrorEvent', 'Name of error should be "AckedErrorEvent"')
+
+                const err = <AckedErrorEvent<{ type: string; test: number }>>e
+                assert(err.data?.test, 'err should have a test data')
+                assert(err.data?.type, 'err should have a type in data')
             } else {
                 assert(false, 'The error should of been of type AckedErrorEvent')
             }
@@ -140,10 +146,9 @@ describe('Test Client & Server behavior', () => {
 
         try {
             const ack = await client.sendEvent(event)
-            assert(!ack)
             assert(false, 'A timeout error needed to be thrown')
         } catch (e) {
-            assert(e, 'An error object need to be thrown')
+            assert(e, 'An error object needs to be thrown')
         }
     })
     it('Client: event{ack: false} --> Server: event', async () => {
@@ -270,14 +275,14 @@ describe('Test Client & Server behavior', () => {
         }
     })
 
-    it('Server: Invalid Request --> Client: Invalid Request Error', async () => {
+    it('Server: Invalid Request --> Client: Invalid Event Error', async () => {
         const badJson = '{ error: not json }'
 
         const trip = new Promise((resolve, reject) => {
             server.onError = async (cause, reply) => {
                 try {
                     assert(cause.details.code === 32600, 'code should match Invalid JSON code')
-                    assert(cause.details.failed === `"${badJson}"`)
+                    assert(cause.details.failed === badJson)
                     resolve()
                 } catch (e) {
                     reject(e.message)
@@ -297,7 +302,7 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-    it('Server: Invalid Request --> Client: Invalid Request Error V2', async () => {
+    it('Server: Invalid Request --> Client: Invalid Event Error V2', async () => {
         const badObject = {
             test: 'this is not needed',
             test2: 'we are missing some items'
@@ -327,7 +332,7 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-    it('Server: Invalid Request --> Client: Invalid Error Request', async () => {
+    it('Server: Invalid Error Request --> Client: Invalid Event Error Obj', async () => {
         const badObject = {
             edc: '1.0',
             id: 'id',
@@ -361,452 +366,43 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-
-    it('Multiple Clients: event{ack: true} --> Server: ack', async () => {
-        const cause = new Event(`test-event`, {
+    it('Server: Invalid Request w/ ACk --> Client: Invalid Event Error Obj', async () => {
+        const badObject = {
+            edc: '1.0',
+            type: 'bad-test-event-with-ack',
             acknowledge: true
+        }
+
+        const trip = new Promise((resolve, reject) => {
+            server.onError = async (cause, reply) => {
+                try {
+                    assert(cause.details.code === 32600, 'code should match Invalid Event code')
+                    assert(cause.details.failed === JSON.stringify(badObject))
+                    resolve()
+                } catch (e) {
+                    reject(e.message)
+                }
+            }
         })
 
-        const cause2 = new Event('test-evnt', {
-            acknowledge: true
+        try {
+            const connection = server.wss.clients.values().next().value
+            // @ts-ignore // Need to ignore for this test
+            const ack = await server.sendEvent(connection, badObject)
+            assert(false, 'Object has no id but an ack.  Timeout should have been thrown.')
+        } catch (e) {
+            if (e instanceof TimeoutError) {
+                assert(true, 'The request should have timed out')
+                assert(e.message, 'There should be a message')
+                assert(e.timeout, 'There should be a timeout time')
+            } else if (e instanceof AckedErrorEvent) {
+                assert(false, 'No id on cause event.  Should have thrown timeout')
+            } else {
+                assert(false, 'The error should of been of type Timeout')
+            }
+        }
+        await trip.catch((msg) => {
+            assert(false, msg)
         })
-
-        const promise1 = client.sendEvent(cause)
-        const promise2 = client2.sendEvent(cause2)
-
-        const res = await Promise.all([promise1, promise2])
-
-        assert(res[0].type === 'acknowledgement', 'Needs to be an ACK')
-        assert(res[1].type === 'acknowledgement', 'Needs to be an ACK')
-
-        assert(res[0].trigger === cause.id, 'The trigger needs to be the ID')
-        assert(res[1].trigger === cause2.id, 'The trigger needs to be the ID')
     })
-    it('Single Client: event{ack: true} --> Server: ack.  Loop random replies', async () => {
-        server.onEvent = (event, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(200))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        for (let i = 0; i <= 25; i += 1) {
-            const cause = new Event(`test-event`, {
-                acknowledge: true
-            })
-            ids.push(cause.id)
-            const response = client.sendEvent(cause)
-            promises.push(response)
-        }
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-    })
-    it('Multiple Clients: event{ack: true} --> Server: ack.  Loop random replies', async () => {
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(500))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= 25; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            const cause = new Event(`test-event`, {
-                acknowledge: true
-            })
-            ids.push(cause.id)
-            const response = tempClient.sendEvent(cause)
-            promises.push(response)
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    })
-    it('Load Test,  25 Clients: event{ack: true} x 10 --> Server: ack.  Loop random replies', async () => {
-        const numberOfClients = 25
-        const numberOfReqeusts = 10
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < numberOfReqeusts; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: true
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    })
-    it('Load Test,  1 Clients{ack: true} x 500 request/client', async () => {
-        const numberOfClients = 1
-        const eventsPerClient = 500
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: true
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(10000)
-    it('Load Test,  1 Clients{ack: true} x 750 request/client', async () => {
-        const numberOfClients = 1
-        const eventsPerClient = 750
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: true
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(10000)
-    it('Load Test,  300 Clients{ack: false} x 400 request/client', async () => {
-        const numberOfClients = 200
-        const eventsPerClient = 400
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 1000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: false
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(!acks[i], 'Ack must be undefined')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(10000)
-    it('Load Test,  300 Clients{ack: true} x 400 request/client', async () => {
-        const numberOfClients = 300
-        const eventsPerClient = 400
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: true
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(60000)
-    it('Load Test,  12 Clients{ack: true} x 10000 request/client', async () => {
-        const numberOfClients = 12
-        const eventsPerClient = 10000
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: true
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(acks[i], 'Ack cannot be undefined')
-            assert(acks[i].type === 'acknowledgement')
-            assert(acks[i].trigger === ids[i], 'event.trigger must == cause.id')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(60000)
-    it('Load Test,  12 Clients{ack: false} x 10000 request/client', async () => {
-        const numberOfClients = 12
-        const eventsPerClient = 10000
-
-        server.onEvent = (cause, conn, reply, send) => {
-            const pause = Math.floor(Math.random() * Math.floor(300))
-            return new Promise((resolve) => {
-                setTimeout(resolve, pause)
-            })
-        }
-
-        const clients: Client[] = []
-        const awaitReadys: Promise<any>[] = []
-
-        for (let i = 0; i <= numberOfClients; i += 1) {
-            const temp = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 50000 })
-            clients.push(temp)
-            awaitReadys.push(temp.awaitReady())
-        }
-
-        await Promise.all(awaitReadys)
-
-        const promises: Promise<IEvents>[] = []
-        const ids: string[] = []
-
-        clients.forEach((tempClient) => {
-            for (let i = 0; i < eventsPerClient; i += 1) {
-                const cause = new Event(`test-event`, {
-                    acknowledge: false
-                })
-                ids.push(cause.id)
-                const response = tempClient.sendEvent(cause)
-                promises.push(response)
-            }
-        })
-
-        const acks = await Promise.all(promises)
-
-        for (let i = 0; i < acks.length; i += 1) {
-            assert(!acks[i], 'Ack must be undefined')
-        }
-
-        const closePromises: Promise<any>[] = []
-        clients.forEach((tempClient) => {
-            closePromises.push(tempClient.close())
-        })
-
-        Promise.all(closePromises)
-    }).timeout(60000)
 })
