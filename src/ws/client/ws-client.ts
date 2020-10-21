@@ -1,4 +1,4 @@
-import WebSocket, { OpenEvent } from 'ws'
+import WebSocket from 'ws'
 import { Events } from '../../events'
 import { IAckEvent, IErrorEvent, IEvents } from '../../events/interface'
 import ParentClient from '../parent-client'

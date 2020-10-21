@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { v4 as uuidv4 } from 'uuid'
-import { ErrorEvent, IErrorDetails, IEvent } from '../../events'
+import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from '../../events'
 
 export class TimeoutError extends Error {
     public timeout: number | undefined
@@ -34,7 +34,7 @@ export class AckedErrorEvent<T> extends Error {
 
     failed: string
 
-    constructor(error: ErrorEvent<T>) {
+    constructor(error: IErrorEvent<T>) {
         super(`Caught ErrorEvent:  ${error.details.message}`)
 
         this.name = 'AckedErrorEvent'
