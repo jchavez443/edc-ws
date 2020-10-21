@@ -48,6 +48,13 @@ const commonEvent = new Event<Details, Shared>('test-event', {
     }
 })
 
+const commonError = new ErrorEvent({
+    cn: 'cn',
+    code: 1234,
+    message: 'simple message',
+    failed: JSON.stringify(commonEvent)
+})
+
 beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
     await client2.awaitReady()
@@ -295,6 +302,24 @@ describe('Test Client & Server behavior', () => {
             const newEvent = reply.caused('final')
             assert(newEvent.trigger === reply.id, 'new event trigger === reply id')
         }
+    })
+    it('Server: onError', async () => {
+        server.onError = async (cause, ws, reply, send) => {
+            assert(cause instanceof ErrorEvent, 'needs to be an Error Event')
+        }
+
+        const reply = await client.sendEvent(new ErrorEvent(commonError))
+
+        assert(!reply, 'Reply should be undefined')
+    })
+    it('Server: onAck', async () => {
+        server.onAck = async (cause, ws, reply, send) => {
+            assert(cause instanceof AckEvent, 'Needs to be and AckEvent')
+        }
+
+        const reply = await client.sendEvent(new AckEvent(commonEvent))
+
+        assert(!reply, 'Reply should be undefined')
     })
 
     it('Server: Invalid Request --> Client: Invalid Event Error', async () => {
