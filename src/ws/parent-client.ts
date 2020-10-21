@@ -1,22 +1,21 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable class-methods-use-this */
-import Ajv from 'ajv'
 import WebSocket, { MessageEvent } from 'ws'
-import { EventSchema, ErrorEventSchema } from './json-schema'
+import { AckEvent, EdcValidator, ErrorEvent, Event, Events, IAckEvent, IErrorEvent, IEvent, IEvents } from 'edc-events'
 import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
-import { AckEvent, ErrorEvent, Event, IEvent, IEvents } from '../events'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
 import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
-
-const ajv = new Ajv()
-const eventValidator = ajv.compile(EventSchema)
-const errorEventValidator = ajv.compile(ErrorEventSchema)
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
         string,
-        [ws: WebSocket, timeout: NodeJS.Timeout, resolve: (event: IEvents) => void, reject: (reason: any) => void]
+        [
+            ws: WebSocket,
+            timeout: NodeJS.Timeout,
+            resolve: (event: Event<any, any> | AckEvent) => void,
+            reject: (reason: any) => void
+        ]
     > = new AckHandlerMap()
 
     private incomingAcks: AckHandlerSet<string> = new AckHandlerSet()
@@ -37,9 +36,9 @@ export default abstract class ParentClient {
     onClose: ServerOnClose | ClientOnClose = async () => {}
 
     protected async onMessage(ws: WebSocket, msgEvent: MessageEvent) {
-        let event
+        let ievent
         try {
-            event = JSON.parse(msgEvent.data.toString())
+            ievent = JSON.parse(msgEvent.data.toString())
         } catch (e) {
             console.log(msgEvent.data)
             // Invalid JSON reply
@@ -47,40 +46,29 @@ export default abstract class ParentClient {
             return
         }
 
-        if (!this.validateJson(event)) {
+        if (!EdcValidator.validate(ievent)) {
             // Invalid Event Object
-            this.send(ws, new InvalidEventErrorEvent(event))
+            this.send(ws, new InvalidEventErrorEvent(ievent))
             return
         }
 
-        this.preOnEvent(event, ws)
+        this.preOnEvent(ievent, ws)
 
-        await this.handleEvent(event, ws)
+        await this.handleEvent(ievent, ws)
 
-        if (event.acknowledge && this.incomingAcks.has(ws, event.id)) {
-            this.send(ws, new AckEvent(event))
+        if (ievent.acknowledge && this.incomingAcks.has(ws, ievent.id)) {
+            this.send(ws, new AckEvent(ievent))
         }
     }
 
-    private validateJson(jsObj: any): boolean {
-        const result = eventValidator(jsObj)
-
-        if (result && jsObj.type === 'error') {
-            const res2 = errorEventValidator(jsObj)
-            return res2
+    private preOnEvent(ievent: IEvents, websocket: WebSocket) {
+        if ((ievent as IEvent<any, any>).acknowledge) {
+            this.incomingAcks.add(websocket, ievent.id)
         }
 
-        return result
-    }
+        if (ievent.trigger === undefined || !this.requestedAcks.has(websocket, ievent.trigger)) return
 
-    private preOnEvent(event: IEvents, websocket: WebSocket) {
-        if ((event as IEvent<any, any>).acknowledge) {
-            this.incomingAcks.add(websocket, event.id)
-        }
-
-        if (event.trigger === undefined || !this.requestedAcks.has(websocket, event.trigger)) return
-
-        const tuple = this.requestedAcks.get(websocket, event.trigger)
+        const tuple = this.requestedAcks.get(websocket, ievent.trigger)
         if (tuple === undefined) return
 
         const [ws, ackTimeout, resolve, reject] = tuple
@@ -90,16 +78,18 @@ export default abstract class ParentClient {
         }
 
         clearTimeout(ackTimeout)
-        this.requestedAcks.delete(websocket, event.trigger)
+        this.requestedAcks.delete(websocket, ievent.trigger)
 
-        if (event.type !== 'error') {
-            resolve(event)
+        if (ievent.type === AckEvent.type) {
+            resolve(new AckEvent(ievent as IAckEvent))
+        } else if (ievent.type === ErrorEvent.type) {
+            reject(new AckedErrorEvent(new ErrorEvent(ievent as IErrorEvent<any>)))
         } else {
-            reject(new AckedErrorEvent(event as ErrorEvent<any>))
+            resolve(new Event(ievent as IEvent<any, any>))
         }
     }
 
-    protected send(ws: WebSocket, event: IEvents): Promise<IEvents> {
+    protected send(ws: WebSocket, event: IEvents): Promise<Event<any, any> | AckEvent> {
         if (event.trigger !== undefined && this.incomingAcks.has(ws, event.trigger)) {
             this.incomingAcks.delete(ws, event.trigger)
         }
@@ -127,7 +117,7 @@ export default abstract class ParentClient {
 
     protected abstract handleEvent(event: any, ws: WebSocket): Promise<void>
 
-    public abstract sendEvent(...args: any): Promise<IEvents>
+    public abstract sendEvent(...args: any): Promise<Event<any, any> | AckEvent>
 
     public abstract close(): Promise<void>
 }

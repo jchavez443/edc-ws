@@ -1,7 +1,7 @@
 import WebSocket from 'ws'
 import http, { IncomingMessage } from 'http'
 import https from 'https'
-import { Events, IAckEvent, IErrorEvent, IEvents } from '../../events'
+import { Events, AckEvent, ErrorEvent, IEvents, Event, IEvent, IErrorEvent, IAckEvent } from 'edc-events'
 import ParentClient from '../parent-client'
 import {
     EdcServer,
@@ -87,7 +87,7 @@ export default class Server extends ParentClient implements EdcServer {
         this.server.listen(port)
     }
 
-    protected async handleEvent(event: IEvents, ws: WebSocket) {
+    protected async handleEvent(ievent: IEvents, ws: WebSocket) {
         const reply = (newEvent: Events) => {
             return this.sendEvent(ws, newEvent)
         }
@@ -96,19 +96,19 @@ export default class Server extends ParentClient implements EdcServer {
             return this.sendEvent(connection, newEvent)
         }
 
-        switch (event.type) {
+        switch (ievent.type) {
             case 'error':
-                await this.onError(event as IErrorEvent<any>, ws, reply, send, this)
+                await this.onError(new ErrorEvent(ievent as IErrorEvent<any>), ws, reply, send, this)
                 break
             case 'acknowledgement':
-                await this.onAck(event as IAckEvent, ws, reply, send, this)
+                await this.onAck(new AckEvent(ievent as IAckEvent), ws, reply, send, this)
                 break
             default:
-                await this.onEvent(event, ws, reply, send, this)
+                await this.onEvent(new Event<any, any>(ievent as IEvent<any, any>), ws, reply, send, this)
         }
     }
 
-    public sendEvent(connection: WebSocket, event: IEvents): Promise<IEvents> {
+    public sendEvent(connection: WebSocket, event: IEvents) {
         return this.send(connection, event)
     }
 

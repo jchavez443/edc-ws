@@ -1,16 +1,7 @@
 import 'mocha'
 import { assert } from 'chai'
-import Edc, {
-    ClientHandlers,
-    Event,
-    ServerHandlers,
-    ErrorEvent,
-    IEvents,
-    Client,
-    AckedErrorEvent,
-    TimeoutError,
-    BasicAuth
-} from '../src'
+import { AckEvent, ErrorEvent, Event } from 'edc-events'
+import Edc, { ClientHandlers, ServerHandlers, AckedErrorEvent, TimeoutError, BasicAuth } from '../src'
 
 const port = 8082
 
@@ -42,21 +33,36 @@ const clientHandlers: ClientHandlers = {
 const client = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
 const client2 = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
 
+type Details = { foo: string; bar: number }
+type Shared = { who: string; where: string }
+
+const commonEvent = new Event<Details, Shared>('test-event', {
+    acknowledge: true,
+    details: {
+        bar: 100,
+        foo: 'string here'
+    },
+    shared: {
+        where: 'to',
+        who: 'from'
+    }
+})
+
 beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
     await client2.awaitReady()
 
     server.onError = serverHandlers.onError
     server.onAck = serverHandlers.onAck
-    server.onEvent = serverHandlers.onError
+    server.onEvent = serverHandlers.onEvent
 
     client.onError = clientHandlers.onError
     client.onAck = clientHandlers.onAck
-    client.onEvent = clientHandlers.onError
+    client.onEvent = clientHandlers.onEvent
 
     client2.onError = clientHandlers.onError
     client2.onAck = clientHandlers.onAck
-    client2.onEvent = clientHandlers.onError
+    client2.onEvent = clientHandlers.onEvent
 })
 
 after('TearDown', async () => {
@@ -272,6 +278,22 @@ describe('Test Client & Server behavior', () => {
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
             assert(e, 'A timeout error should have been thrown')
+        }
+    })
+
+    it('Server: onEvent', async () => {
+        server.onEvent = async (cause, ws, reply, send) => {
+            const event = cause.caused('new-event')
+            reply(event)
+        }
+
+        const reply = await client.sendEvent(commonEvent)
+
+        if (reply instanceof AckEvent) {
+            assert(false, 'Should have been an Event not AckEvent')
+        } else {
+            const newEvent = reply.caused('final')
+            assert(newEvent.trigger === reply.id, 'new event trigger === reply id')
         }
     })
 

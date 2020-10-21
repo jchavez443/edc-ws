@@ -1,6 +1,5 @@
 import WebSocket from 'ws'
-import { Events } from '../../events'
-import { IAckEvent, IErrorEvent, IEvents } from '../../events/interface'
+import { AckEvent, ErrorEvent, IEvents, Events, Event, IEvent, IErrorEvent, IAckEvent } from 'edc-events'
 import ParentClient from '../parent-client'
 // eslint-disable-next-line prettier/prettier
 import {
@@ -61,17 +60,17 @@ export default class Client extends ParentClient implements EdcClient {
 
         switch (event.type) {
             case 'error':
-                await this.onError(event as IErrorEvent<any>, reply)
+                await this.onError(new ErrorEvent(event as IErrorEvent<any>), reply)
                 break
             case `acknowledgement`:
-                await this.onAck(event as IAckEvent, reply)
+                await this.onAck(new AckEvent(event as IAckEvent), reply)
                 break
             default:
-                await this.onEvent(event, reply)
+                await this.onEvent(new Event(event as IEvent<any, any>), reply)
         }
     }
 
-    public sendEvent(event: Events): Promise<IEvents> {
+    public sendEvent(event: Events) {
         return this.send(this.ws, event)
     }
 

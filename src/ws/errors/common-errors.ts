@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { v4 as uuidv4 } from 'uuid'
-import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from '../../events'
+import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from 'edc-events'
 
 export class TimeoutError extends Error {
     public timeout: number | undefined

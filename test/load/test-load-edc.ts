@@ -1,16 +1,7 @@
 import 'mocha'
 import { assert } from 'chai'
-import Edc, {
-    ClientHandlers,
-    Event,
-    ServerHandlers,
-    ErrorEvent,
-    IEvents,
-    Client,
-    AckedErrorEvent,
-    TimeoutError,
-    BasicAuth
-} from '../../src'
+import { Event, IEvents } from 'edc-events'
+import Edc, { ClientHandlers, ServerHandlers, Client, BasicAuth } from '../../src'
 
 const port = 8082
 
@@ -48,15 +39,15 @@ beforeEach(`Clear events an await connections`, async () => {
 
     server.onError = serverHandlers.onError
     server.onAck = serverHandlers.onAck
-    server.onEvent = serverHandlers.onError
+    server.onEvent = serverHandlers.onEvent
 
     client.onError = clientHandlers.onError
     client.onAck = clientHandlers.onAck
-    client.onEvent = clientHandlers.onError
+    client.onEvent = clientHandlers.onEvent
 
     client2.onError = clientHandlers.onError
     client2.onAck = clientHandlers.onAck
-    client2.onEvent = clientHandlers.onError
+    client2.onEvent = clientHandlers.onEvent
 })
 
 after('TearDown', async () => {

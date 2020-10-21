@@ -2,7 +2,7 @@
 import http, { IncomingMessage } from 'http'
 import https from 'https'
 import WebSocket from 'ws'
-import { IAckEvent, IErrorEvent, IEvent, IEvents, Events } from '../../events'
+import { AckEvent, ErrorEvent, Event, IEvents, Events } from 'edc-events'
 import ParentClient from '../parent-client'
 import { Auth } from './authentication/interfaces'
 
@@ -21,13 +21,13 @@ export interface EdcServer extends ParentClient {
 
 export type ServerAuthenticate = (request: IncomingMessage) => Auth
 
-export type ServerSendEvent = (connection: WebSocket, event: Events) => Promise<IEvents>
-export type ServerReplyEvent = (event: Events) => Promise<IEvents>
+export type ServerSendEvent = (connection: WebSocket, event: Events) => Promise<Event<any, any> | AckEvent>
+export type ServerReplyEvent = (event: Events) => Promise<Event<any, any> | AckEvent>
 
 export type ServerBroadCastEvent = (event: Events) => void
 
 export type ServerOnEvent = (
-    event: IEvent<any, any>,
+    event: Event<any, any>,
     connection: WebSocket,
     reply: ServerReplyEvent,
     send: ServerSendEvent,
@@ -35,7 +35,7 @@ export type ServerOnEvent = (
 ) => Promise<any>
 
 export type ServerOnError = (
-    event: IErrorEvent<any>,
+    event: ErrorEvent<any>,
     connection: WebSocket,
     reply: ServerReplyEvent,
     send: ServerSendEvent,
@@ -43,7 +43,7 @@ export type ServerOnError = (
 ) => Promise<any>
 
 export type ServerOnAck = (
-    event: IAckEvent,
+    event: AckEvent,
     connection: WebSocket,
     reply: ServerReplyEvent,
     send: ServerSendEvent,
