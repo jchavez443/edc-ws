@@ -1,7 +1,7 @@
 import 'mocha'
 import { assert } from 'chai'
-import { Event, IEvents } from 'edc-events'
-import Edc, { ClientHandlers, ServerHandlers, Client, BasicAuth } from '../../src'
+import { Event } from 'edc-events'
+import Edc, { ClientHandlers, ServerHandlers, Client, BasicAuth, AckReply } from '../../src'
 
 const port = 8082
 
@@ -83,7 +83,7 @@ describe('Test Client & Server loads', () => {
             })
         }
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         for (let i = 0; i <= 25; i += 1) {
@@ -122,7 +122,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -171,7 +171,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -222,7 +222,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -273,7 +273,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -324,7 +324,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -341,7 +341,8 @@ describe('Test Client & Server loads', () => {
         const acks = await Promise.all(promises)
 
         for (let i = 0; i < acks.length; i += 1) {
-            assert(!acks[i], 'Ack must be undefined')
+            assert(!acks[i].event, 'Ack must be undefined')
+            assert(acks[i].async, 'Reply must be async')
         }
 
         const closePromises: Promise<any>[] = []
@@ -373,7 +374,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -424,7 +425,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -475,7 +476,7 @@ describe('Test Client & Server loads', () => {
 
         await Promise.all(awaitReadys)
 
-        const promises: Promise<IEvents>[] = []
+        const promises: Promise<AckReply>[] = []
         const ids: string[] = []
 
         clients.forEach((tempClient) => {
@@ -492,7 +493,8 @@ describe('Test Client & Server loads', () => {
         const acks = await Promise.all(promises)
 
         for (let i = 0; i < acks.length; i += 1) {
-            assert(!acks[i], 'Ack must be undefined')
+            assert(!acks[i].event, 'Reply event must be undefined')
+            assert(acks[i].async, 'Reply must be async')
         }
 
         const closePromises: Promise<any>[] = []

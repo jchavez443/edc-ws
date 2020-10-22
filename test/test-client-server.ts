@@ -82,11 +82,15 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const ack = await client.sendEvent(event)
+        const reply = await client.sendEvent(event)
 
-        assert(ack, 'Acknowledgemnt not returned')
+        if (!reply.async && reply.event){
+            assert(reply.event.type, 'Has type')
+        }
 
-        assert(ack.trigger === event.id, 'Acknowledgemnt trigger != cause.id')
+        assert(reply, 'Acknowledgemnt not returned')
+
+        assert(reply.trigger === event.id, 'Acknowledgemnt trigger != cause.id')
     })
     it('Client: event{ack: true} --> Server: error', async () => {
         server.onEvent = async (cause, connection, reply) => {
@@ -175,7 +179,7 @@ describe('Test Client & Server behavior', () => {
 
         const ack = await client.sendEvent(event)
 
-        assert(!ack, 'Acknowledgemnt needs to be undefined')
+        assert(!ack.event, 'Acknowledgemnt, event needs to be undefined')
     })
     it('Client: event{ack: false} --> Server: no-reply', async () => {
         server.onEvent = async (cause, connection, reply, send) => {
@@ -186,9 +190,10 @@ describe('Test Client & Server behavior', () => {
             acknowledge: false
         })
 
-        const ack = await client.sendEvent(event)
+        const reply = await client.sendEvent(event)
 
-        assert(!ack, 'Acknowledgemnt needs to be undefined')
+        assert(!reply.event, 'Acknowledgemnt, event needs to be undefined')
+        assert(reply.async, 'The reply needs to be async')
     })
 
     it('Server: event{ack: true} --> Client: ack', async () => {
@@ -267,8 +272,9 @@ describe('Test Client & Server behavior', () => {
         })
 
         const info = server.wss.clients.values().next().value
-        const event = await server.sendEvent(info, cause)
-        assert(!event, 'An event should NOT be returned')
+        const reply = await server.sendEvent(info, cause)
+        assert(!reply.event, 'An NO event should be returned')
+        assert(reply.async, 'the reply should not be async')
     })
     it('Server: event{ack: false} --> Client: no-reply', async () => {
         client.onEvent = (cause, reply) => {
@@ -296,11 +302,11 @@ describe('Test Client & Server behavior', () => {
 
         const reply = await client.sendEvent(commonEvent)
 
-        if (reply instanceof AckEvent) {
-            assert(false, 'Should have been an Event not AckEvent')
-        } else {
-            const newEvent = reply.caused('final')
+        if (reply.event) {
+            const newEvent = reply.event.caused('final')
             assert(newEvent.trigger === reply.id, 'new event trigger === reply id')
+        } else {
+            // either async or an ACK
         }
     })
     it('Server: onError', async () => {
@@ -310,7 +316,8 @@ describe('Test Client & Server behavior', () => {
 
         const reply = await client.sendEvent(new ErrorEvent(commonError))
 
-        assert(!reply, 'Reply should be undefined')
+        assert(!reply.event, 'Reply should be undefined')
+        assert(reply.async, 'The reply should be async')
     })
     it('Server: onAck', async () => {
         server.onAck = async (cause, ws, reply, send) => {
@@ -319,7 +326,8 @@ describe('Test Client & Server behavior', () => {
 
         const reply = await client.sendEvent(new AckEvent(commonEvent))
 
-        assert(!reply, 'Reply should be undefined')
+        assert(!reply.event, 'Reply event should be undefined')
+        assert(reply.async, 'Reply should be async')
     })
 
     it('Server: Invalid Request --> Client: Invalid Event Error', async () => {
@@ -341,7 +349,8 @@ describe('Test Client & Server behavior', () => {
             const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badJson)
-            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+            assert(!ack.event, 'Should have no event')
+            assert(ack.async, 'Reply should be async')
         } catch (e) {
             assert(false, 'No error should have made it here.  Should be in client.onError ')
         }
@@ -371,7 +380,8 @@ describe('Test Client & Server behavior', () => {
             const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badObject)
-            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+            assert(!ack.event, 'Should have no event')
+            assert(ack.async, 'Reply should be async')
         } catch (e) {
             assert(false, 'No error should have made it here.  Should be in server.onError ')
         }
@@ -405,7 +415,8 @@ describe('Test Client & Server behavior', () => {
             const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badObject)
-            assert(!ack, 'An ACK will NOT be returned because event has no acknowledge.')
+            assert(!ack.event, 'Should have no event')
+            assert(ack.async, 'Reply should be async')
         } catch (e) {
             assert(false, 'No error should have made it here.  Should be in server.onError ')
         }

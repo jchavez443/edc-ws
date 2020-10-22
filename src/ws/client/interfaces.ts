@@ -1,7 +1,8 @@
 /* eslint-disable no-use-before-define */
 import WebSocket, { OpenEvent } from 'ws'
-import { AckEvent, ErrorEvent, Event, IEvents, Events } from 'edc-events'
+import { AckEvent, ErrorEvent, Event, Events } from 'edc-events'
 import ParentClient from '../parent-client'
+import { AckReply } from '..'
 
 export interface EdcClient extends ParentClient {
     sendEvent: ClientSendEvent
@@ -16,7 +17,7 @@ export interface EdcClient extends ParentClient {
     awaitReady: () => Promise<void>
 }
 
-export type ClientSendEvent = (event: Events) => Promise<Event<any, any> | AckEvent>
+export type ClientSendEvent = (event: Events) => Promise<AckReply>
 
 export type ClientOnEvent = (event: Event<any, any>, reply: ClientSendEvent) => Promise<any>
 

@@ -2,20 +2,16 @@
 /* eslint-disable max-classes-per-file */
 /* eslint-disable class-methods-use-this */
 import WebSocket, { MessageEvent } from 'ws'
-import { AckEvent, EdcValidator, ErrorEvent, Event, Events, IAckEvent, IErrorEvent, IEvent, IEvents } from 'edc-events'
+import { AckEvent, EdcValidator, ErrorEvent, Event, IErrorEvent, IEvent, IEvents } from 'edc-events'
 import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
 import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
+import AckReply from './ack-reply'
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
         string,
-        [
-            ws: WebSocket,
-            timeout: NodeJS.Timeout,
-            resolve: (event: Event<any, any> | AckEvent) => void,
-            reject: (reason: any) => void
-        ]
+        [ws: WebSocket, timeout: NodeJS.Timeout, resolve: (event: AckReply) => void, reject: (reason: any) => void]
     > = new AckHandlerMap()
 
     private incomingAcks: AckHandlerSet<string> = new AckHandlerSet()
@@ -80,16 +76,14 @@ export default abstract class ParentClient {
         clearTimeout(ackTimeout)
         this.requestedAcks.delete(websocket, ievent.trigger)
 
-        if (ievent.type === AckEvent.type) {
-            resolve(new AckEvent(ievent as IAckEvent))
-        } else if (ievent.type === ErrorEvent.type) {
-            reject(new AckedErrorEvent(new ErrorEvent(ievent as IErrorEvent<any>)))
+        if (ievent.type !== ErrorEvent.type) {
+            resolve(new AckReply(ievent))
         } else {
-            resolve(new Event(ievent as IEvent<any, any>))
+            reject(new AckedErrorEvent(new ErrorEvent(ievent as IErrorEvent<any>)))
         }
     }
 
-    protected send(ws: WebSocket, event: IEvents): Promise<Event<any, any> | AckEvent> {
+    protected send(ws: WebSocket, event: IEvents): Promise<AckReply> {
         if (event.trigger !== undefined && this.incomingAcks.has(ws, event.trigger)) {
             this.incomingAcks.delete(ws, event.trigger)
         }
@@ -105,7 +99,7 @@ export default abstract class ParentClient {
                 ws.send(JSON.stringify(event))
             } else {
                 ws.send(JSON.stringify(event))
-                resolve() // we do not have the returned event.  ack not requested
+                resolve(new AckReply()) // we do not have the returned event.  ack not requested
             }
         })
     }
@@ -117,7 +111,7 @@ export default abstract class ParentClient {
 
     protected abstract handleEvent(event: any, ws: WebSocket): Promise<void>
 
-    public abstract sendEvent(...args: any): Promise<Event<any, any> | AckEvent>
+    public abstract sendEvent(...args: any): Promise<any>
 
     public abstract close(): Promise<void>
 }
