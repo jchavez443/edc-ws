@@ -1,6 +1,6 @@
 import 'mocha'
 import { expect, assert } from 'chai'
-import express from 'express'
+import express, { response } from 'express'
 import bodyParser from 'body-parser'
 import axios, { AxiosResponse } from 'axios'
 import { AckEvent, Event } from 'edc-events'
@@ -29,8 +29,8 @@ after('TearDown', async () => {
 })
 
 describe('Http Request comparision', () => {
-    it('Load Test,  1 requests', async () => {
-        const numberOfRequests = 1
+    it('Load Test,  232 requests', async () => {
+        const numberOfRequests = 232
 
         const promises: Promise<AxiosResponse<any>>[] = []
 
