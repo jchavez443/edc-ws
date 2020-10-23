@@ -190,6 +190,7 @@ server.onEvent('*', async (cause, ws, reply, send, that) => {
     - [Generic Events](#generic-events)
         - [Event<T, K>](#eventt-k)
         - [ErrorEvent<T>](#erroreventt)
+    - [Registering Routes](#registering-routes)
 
 <!-- /TOC -->
 
@@ -485,3 +486,49 @@ const error = new ErrorEvent<T>({
     }
 })
 ```
+
+## Registering Routes
+
+In the hopes of staying organized it is possible to register event-routes in seperate files.
+Each route file would have to export an `eventType` string and a `handler` function
+
+The file sturcture would look something like bellow:
+```text
+src
+|    main.ts
+|----routes    
+    |    index.ts
+    |    route-1.ts
+    |    route-2.ts
+    |    route-3.ts
+```
+
+index.ts
+```ts
+import * as route1 from './route-1'
+import * as route2 from './route-2'
+import * as route3 from './route-3'
+
+export default [route1, route2, route3]
+```
+
+route-1.ts
+```ts
+import { ServerOnEventHandler, Event } from 'edc-ws'
+
+export const eventType = 'route-1'
+
+export const handler: ServerOnEventHandler = async (cause, conn, reply) => {
+    const event = new Event('answer-route-1').inherit(cause)
+    reply(event)
+}
+```
+
+main.ts
+```ts
+import routes from './routes'
+
+const server = new Edc.Server(port)
+server.register(routes)
+```
+> Note: `register()` will add all event routes that are exported in the array that is in the `src/routes/index.ts`
