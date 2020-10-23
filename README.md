@@ -494,13 +494,13 @@ Each route file would have to export an `eventType` string and a `handler` funct
 
 The file sturcture would look something like bellow:
 ```text
-src
-|    main.ts
-|----routes    
-    |    index.ts
-    |    route-1.ts
-    |    route-2.ts
-    |    route-3.ts
+src/
+|-- main.ts   
+|----routes/   
+     |-- index.ts
+     |-- route-1.ts
+     |-- route-2.ts
+     |-- route-3.ts
 ```
 
 index.ts
