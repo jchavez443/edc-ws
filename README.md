@@ -33,22 +33,20 @@ Server initialization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
-const server = new Edc.Server(port, {
-    onEvent: async (cause, info, reply, send) => {
+const server = new Edc.Server(port)
 
-        const event = new Event('reaction').inherit(cause)
+server.onEvent('event-type', async (cause, ws, reply, send, that) => {
+    const event = new Event('other-event').inherit(cause)
 
-        reply(event) // Replies to the connection that sent the "cause" Event
-        
-        send(getSomeConnection(), event)
-    },
-    onAck: async (cause, info, reply, send) => {
-        // Handle events.type = "acknowledgement"
-    },
-    onError: async (cause, info, reply, send) => {
-        // Handle events.type = "error"
-    }
+    reply(event)
 })
+
+server.onAck = async (cause, ws, reply, send, that) => {
+    // Handle events.type = "acknowledgement"
+}
+server.onError = async (cause, ws, reply, send, that) => {
+    // Handle events.type = "error"
+}
 ```
 
 Send an Event (Server)
@@ -84,19 +82,20 @@ Client initilization
 ```ts
 import Edc, { Event } from 'edc-ws'
 
-const client = new Edc.Client('ws://websocket.server.com', {
-    onEvent: async (cause, reply) => {
-        const event = new Event('event-type').inherit(cause)
+const client = new Edc.Client('ws://websocket.server.com')
 
-        reply(event)
-    },
-    onAck: async (cause, reply) => {
-        // Handle events.type = "acknowledgement"
-    },
-    onError: async (cause, reply) => {
-        // Handle events.type = "error"
-    }
+client.onEvent('event-type', sync (cause, reply) => {
+    const event = new Event('event-type').inherit(cause)
+
+    reply(event)
 })
+
+client.onAck = async (cause, reply) => {
+    // Handle events.type = "acknowledgement"
+}
+client.onError = async (cause, reply) => {
+    // Handle events.type = "error"
+}
 ```
 
 Send an Event (Client)
@@ -148,6 +147,16 @@ const event = new Event('event-type-2').inherit(cause)
 // event.shared === cause.shared
 
 ```
+
+To match any event use `'*'` as the event type in the `onEvent()` function
+```ts
+// This will match any event. But the server|client will first try to match the event to a named one.
+server.onEvent('*', async (cause, ws, reply, send, that) => {
+    const event = new Event('other-event').inherit(cause)
+
+    reply(event)
+})
+``` 
 
 ## Table of Contents
 
