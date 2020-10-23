@@ -1,0 +1,47 @@
+import 'mocha'
+import { assert } from 'chai'
+import { AckEvent, ErrorEvent, Event } from 'edc-events'
+import Edc, { AckedErrorEvent, TimeoutError, UnknownEventErrorEvent } from '../src'
+
+import routes from './routes'
+
+const port = 8085
+
+const server = new Edc.Server(port)
+server.register(routes)
+
+const client = new Edc.Client(`ws://localhost:${port}`)
+client.onEvent('*', async () => {})
+
+beforeEach(`Clear events an await connections`, async () => {
+    await client.awaitReady()
+})
+
+after('TearDown', async () => {
+    server.close()
+})
+
+describe('Test Routes Register', () => {
+    it('Check the routes work', async () => {
+        const toRoute1 = new Event('route-1', { acknowledge: true })
+        const toRoute2 = new Event('route-2', { acknowledge: true })
+
+        const reply1 = await client.sendEvent(toRoute1)
+        const reply2 = await client.sendEvent(toRoute2)
+
+        assert(!reply1.async, `Reply1 should not be async`)
+        assert(!reply2.async, `Reply2 should not be async`)
+        assert(reply1.event, `Reply1 should have an event but was ${reply1.event}`)
+        assert(reply2.event, `Reply2 should have an event but was ${reply2.event}`)
+
+        assert(
+            reply1.event.type === 'answer-route-1',
+            `The reply should have been 'answer-route-1' but was ${reply1.event.type} `
+        )
+
+        assert(
+            reply2.event.type === 'answer-route-2',
+            `The reply should have been 'answer-route-2' but was ${reply1.event.type} `
+        )
+    })
+})

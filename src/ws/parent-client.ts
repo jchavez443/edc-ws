@@ -7,7 +7,7 @@ import { ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './cl
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError } from './server'
 import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
 import AckReply from './ack-reply'
-import { OnEventHandlers } from './interfaces'
+import { OnEventHandlers, Route } from './interfaces'
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
@@ -105,6 +105,17 @@ export default abstract class ParentClient {
     protected cleanUp(ws: WebSocket) {
         this.incomingAcks.remove(ws)
         this.requestedAcks.remove(ws)
+    }
+
+    public register(routes: Route[]) {
+        if (!routes) {
+            throw new Error('routes is undefined')
+        }
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const route of routes) {
+            this.onEvent(route.eventType, route.handler)
+        }
     }
 
     public abstract onEvent(eventType: string, handler: OnEventHandlers): void
