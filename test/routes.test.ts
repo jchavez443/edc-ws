@@ -41,7 +41,29 @@ describe('Test Routes Register', () => {
 
         assert(
             reply2.event.type === 'answer-route-2',
-            `The reply should have been 'answer-route-2' but was ${reply1.event.type} `
+            `The reply should have been 'answer-route-2' but was ${reply2.event.type} `
+        )
+    })
+    it('Check the sub routes work', async () => {
+        const toSubRoute1 = new Event('route-sub-1', { acknowledge: true })
+        const toSubRoute2 = new Event('route-sub-2', { acknowledge: true })
+
+        const reply1 = await client.sendEvent(toSubRoute1)
+        const reply2 = await client.sendEvent(toSubRoute2)
+
+        assert(!reply1.async, `Reply1 should not be async`)
+        assert(!reply2.async, `Reply2 should not be async`)
+        assert(reply1.event, `Reply1 should have an event but was ${reply1.event}`)
+        assert(reply2.event, `Reply2 should have an event but was ${reply2.event}`)
+
+        assert(
+            reply1.event.type === 'answer-route-sub-1',
+            `The reply should have been 'answer-route-sub-1' but was ${reply1.event.type} `
+        )
+
+        assert(
+            reply2.event.type === 'answer-route-sub-2',
+            `The reply should have been 'answer-route-sub-1' but was ${reply2.event.type} `
         )
     })
 })

@@ -191,6 +191,7 @@ server.onEvent('*', async (cause, ws, reply, send, that) => {
         - [Event<T, K>](#eventt-k)
         - [ErrorEvent<T>](#erroreventt)
     - [Registering Routes](#registering-routes)
+        - [Further Organize](#further-organize)
 
 <!-- /TOC -->
 
@@ -532,3 +533,38 @@ const server = new Edc.Server(port)
 server.register(routes)
 ```
 > Note: `register()` will add all event routes that are exported in the array that is in the `src/routes/index.ts`
+
+### Further Organize
+
+```text
+src/
+|-- main.ts   
+|-----routes/   
+      |-- index.ts
+      |-- route-1.ts
+      |-- route-2.ts
+      |-- route-3.ts
+      |-----sub/
+              |-- index.ts
+              |-- sub-route-1.ts
+              |-- sub-route-2.ts
+```
+
+src/routes/sub/index.ts
+```ts
+import * as sub1 from './route-sub-1'
+import * as sub2 from './route-sub-2'
+
+export default [sub1, sub2]
+```
+
+src/routes/index.ts
+```ts
+import * as route1 from './route-1'
+import * as route2 from './route-2'
+import sub from './sub'
+
+export default [route1, route2, ...sub] // Spread Operator makes this one longer array.
+```
+
+It is possible to go to extreme depths using this, grouping common events together.
