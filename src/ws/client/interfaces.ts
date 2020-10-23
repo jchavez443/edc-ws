@@ -32,14 +32,6 @@ export type ClientOnConnect = (client: EdcClient, ws: WebSocket, event: OpenEven
 
 export type ClientOnClose = (client: EdcClient, ws: WebSocket, event: WebSocket.CloseEvent) => Promise<any>
 
-export interface ClientHandlers {
-    onEvent: ClientOnEvent
-    onError: ClientOnError
-    onAck: ClientOnAck
-    onConnect?: ClientOnConnect
-    onClose?: ClientOnClose
-}
-
 export interface ClientOptions {
     auth?: string
     timeout?: number
