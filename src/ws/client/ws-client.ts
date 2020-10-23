@@ -4,36 +4,30 @@ import ParentClient from '../parent-client'
 // eslint-disable-next-line prettier/prettier
 import {
     ClientHandlers,
+    ClientOnAck,
     ClientOnClose,
     ClientOnConnect,
+    ClientOnError,
+    ClientOnEventHandler,
     ClientOptions,
     EdcClient
 } from './interfaces'
+import { UnknownEventErrorEvent } from '../errors'
 
 // eslint-disable-next-line import/prefer-default-export
 export default class Client extends ParentClient implements EdcClient {
     ws: WebSocket
 
-    onEvent
+    onError: ClientOnError = async () => {}
 
-    onError
-
-    onAck
+    onAck: ClientOnAck = async () => {}
 
     onConnect: ClientOnConnect = async () => {}
 
     onClose: ClientOnClose = async () => {}
 
-    constructor(url: string, handlers: ClientHandlers, options?: ClientOptions) {
+    constructor(url: string, options?: ClientOptions) {
         super()
-
-        if (handlers.onConnect) this.onConnect = handlers.onConnect
-
-        if (handlers.onClose) this.onClose = handlers.onClose
-
-        this.onAck = handlers.onAck
-        this.onError = handlers.onError
-        this.onEvent = handlers.onEvent
 
         if (options?.timeout) this.ackTimeout = options?.timeout
 
@@ -53,21 +47,39 @@ export default class Client extends ParentClient implements EdcClient {
         }
     }
 
-    protected async handleEvent(event: IEvents) {
+    protected async handleEvent(ievent: IEvents) {
         const reply = (newEvent: Events) => {
             return this.sendEvent(newEvent)
         }
 
-        switch (event.type) {
+        switch (ievent.type) {
             case 'error':
-                await this.onError(new ErrorEvent(event as IErrorEvent<any>), reply)
+                await this.onError(new ErrorEvent(ievent as IErrorEvent<any>), reply)
                 break
             case `acknowledgement`:
-                await this.onAck(new AckEvent(event as IAckEvent), reply)
+                await this.onAck(new AckEvent(ievent as IAckEvent), reply)
                 break
-            default:
-                await this.onEvent(new Event(event as IEvent<any, any>), reply)
+            default: {
+                const event = new Event<any, any>(ievent as IEvent<any, any>)
+                let onEventHandler = this.onEventHandlers.get(event.type)
+                if (!onEventHandler) {
+                    onEventHandler = this.onEventHandlers.get('*')
+                }
+
+                if (!onEventHandler) {
+                    reply(new UnknownEventErrorEvent(event))
+                } else {
+                    await (<ClientOnEventHandler>onEventHandler)(event, reply)
+                }
+                break
+            }
         }
+    }
+
+    public onEvent(eventType: string, handler: ClientOnEventHandler) {
+        if (eventType === undefined) return
+
+        this.onEventHandlers.set(eventType, handler)
     }
 
     public sendEvent(event: Events) {

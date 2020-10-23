@@ -5,7 +5,7 @@ import bodyParser from 'body-parser'
 import axios, { AxiosResponse } from 'axios'
 import { AckEvent, Event } from 'edc-events'
 
-const port = 8085
+const port = 8086
 const app = express()
 app.use(bodyParser.json())
 
@@ -29,6 +29,32 @@ after('TearDown', async () => {
 })
 
 describe('Http Request comparision', () => {
+    it('Load Test,  1 requests', async () => {
+        const numberOfRequests = 1
+
+        const promises: Promise<AxiosResponse<any>>[] = []
+
+        for (let i = 0; i < numberOfRequests; i += 1) {
+            const cause = new Event(`test-event`, {
+                acknowledge: true
+            })
+            const str = JSON.stringify(cause)
+            const resposne = axios({
+                method: 'post',
+                url: `http://localhost:${port}`,
+                data: cause
+            })
+            promises.push(resposne)
+        }
+
+        const acks = await Promise.all(promises)
+
+        for (let i = 0; i < acks.length; i += 1) {
+            assert(acks[i], 'Ack must be defined')
+            const ack = acks[i].data
+            assert(ack.type === 'acknowledgement', 'ack.type must == "acknowledgement')
+        }
+    }).timeout(10000)
     it('Load Test,  300 requests', async () => {
         const numberOfRequests = 300
 
