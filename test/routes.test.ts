@@ -1,7 +1,7 @@
 import 'mocha'
 import { assert } from 'chai'
-import { AckEvent, ErrorEvent, Event } from 'edc-events'
-import Edc, { AckedErrorEvent, TimeoutError, UnknownEventErrorEvent } from '../src'
+import { Event } from 'edc-events'
+import Edc from '../src'
 
 import routes from './routes'
 
