@@ -12,6 +12,7 @@ export interface EdcServer extends ParentClient {
     broadCast: ServerBroadCastEvent
 
     onEvent: ServerOnEvent
+
     onError: ServerOnError
     onAck: ServerOnAck
     onConnect: ServerOnConnect
@@ -27,13 +28,15 @@ export type ServerReplyEvent = (event: Events) => Promise<AckReply>
 
 export type ServerBroadCastEvent = (event: Events) => void
 
-export type ServerOnEvent = (
+export type ServerOnEventHandler = (
     event: Event<any, any>,
     connection: WebSocket,
     reply: ServerReplyEvent,
     send: ServerSendEvent,
     server: EdcServer
 ) => Promise<any>
+
+export type ServerOnEvent = (eventType: string, handler: ServerOnEventHandler) => void
 
 export type ServerOnError = (
     event: ErrorEvent<any>,
@@ -59,15 +62,6 @@ export type ServerOnConnect = (
 ) => Promise<any>
 
 export type ServerOnClose = (event: WebSocket.CloseEvent, ws: WebSocket, server: EdcServer) => Promise<any>
-
-export interface ServerHandlers {
-    onEvent: ServerOnEvent
-    onError: ServerOnError
-    onAck: ServerOnAck
-    onConnect?: ServerOnConnect
-    onClose?: ServerOnClose
-    authenticate?: ServerAuthenticate
-}
 
 export interface ServerOptions {
     timeout?: number

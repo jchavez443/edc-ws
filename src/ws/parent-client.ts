@@ -3,10 +3,11 @@
 /* eslint-disable class-methods-use-this */
 import WebSocket, { MessageEvent } from 'ws'
 import { AckEvent, EdcValidator, ErrorEvent, Event, IErrorEvent, IEvent, IEvents } from 'edc-events'
-import { ClientOnEvent, ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
-import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError, ServerOnEvent } from './server'
+import { ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
+import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError } from './server'
 import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
 import AckReply from './ack-reply'
+import { OnEventHandlers } from './interfaces'
 
 export default abstract class ParentClient {
     private requestedAcks: AckHandlerMap<
@@ -18,10 +19,7 @@ export default abstract class ParentClient {
 
     protected ackTimeout: number = 5000
 
-    /**
-     * @returns Promise
-     */
-    abstract onEvent: ServerOnEvent | ClientOnEvent
+    protected onEventHandlers: Map<string, OnEventHandlers> = new Map()
 
     abstract onError: ServerOnError | ClientOnError
 
@@ -108,6 +106,8 @@ export default abstract class ParentClient {
         this.incomingAcks.remove(ws)
         this.requestedAcks.remove(ws)
     }
+
+    public abstract onEvent(eventType: string, handler: OnEventHandlers): void
 
     protected abstract handleEvent(event: any, ws: WebSocket): Promise<void>
 

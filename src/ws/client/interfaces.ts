@@ -8,6 +8,7 @@ export interface EdcClient extends ParentClient {
     sendEvent: ClientSendEvent
 
     onEvent: ClientOnEvent
+
     onError: ClientOnError
     onAck: ClientOnAck
     onConnect: ClientOnConnect
@@ -19,7 +20,9 @@ export interface EdcClient extends ParentClient {
 
 export type ClientSendEvent = (event: Events) => Promise<AckReply>
 
-export type ClientOnEvent = (event: Event<any, any>, reply: ClientSendEvent) => Promise<any>
+export type ClientOnEventHandler = (event: Event<any, any>, reply: ClientSendEvent) => Promise<any>
+
+export type ClientOnEvent = (eventType: string, handler: ClientOnEventHandler) => void
 
 export type ClientOnError = (event: ErrorEvent<any>, reply: ClientSendEvent) => Promise<any>
 

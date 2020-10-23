@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { v4 as uuidv4 } from 'uuid'
-import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent } from 'edc-events'
+import { ErrorEvent, IErrorDetails, IErrorEvent, IEvent, Event } from 'edc-events'
 
 export class TimeoutError extends Error {
     public timeout: number | undefined
@@ -97,6 +97,29 @@ export class InvalidEventErrorEvent implements ErrorEvent<any> {
                 message: 'The JSON sent is not a valid Event object.',
                 failed: JSON.stringify(arg)
             }
+        }
+    }
+}
+
+export class UnknownEventErrorEvent implements ErrorEvent<any> {
+    readonly type: 'error' = 'error'
+
+    readonly edc: '1.0' = '1.0'
+
+    details: IErrorDetails<any>
+
+    trigger: string
+
+    id: string
+
+    constructor(failedEvent: Event<any, any>) {
+        this.id = uuidv4()
+        this.trigger = failedEvent.id
+        this.details = {
+            code: 404,
+            cn: 'Unknow Event',
+            message: `The event type '${failedEvent.type}' is unknown`,
+            failed: JSON.stringify(failedEvent)
         }
     }
 }

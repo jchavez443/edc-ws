@@ -6,12 +6,15 @@ import ParentClient from '../parent-client'
 import {
     EdcServer,
     ServerAuthenticate,
-    ServerHandlers,
+    ServerOnAck,
     ServerOnClose,
     ServerOnConnect,
+    ServerOnError,
+    ServerOnEventHandler,
     ServerOptions
 } from './interfaces'
 import { Auth } from './authentication/interfaces'
+import { UnknownEventErrorEvent } from '../errors'
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 
@@ -21,11 +24,9 @@ export default class Server extends ParentClient implements EdcServer {
 
     server: http.Server | https.Server
 
-    onEvent
+    onError: ServerOnError = async () => {}
 
-    onError
-
-    onAck
+    onAck: ServerOnAck = async () => {}
 
     onConnect: ServerOnConnect = async () => {}
 
@@ -35,7 +36,7 @@ export default class Server extends ParentClient implements EdcServer {
         return { authenticated: true }
     }
 
-    constructor(port: number, handlers: ServerHandlers, serverOptions?: ServerOptions) {
+    constructor(port: number, serverOptions?: ServerOptions) {
         super()
 
         if (serverOptions?.https) {
@@ -57,16 +58,6 @@ export default class Server extends ParentClient implements EdcServer {
                 this.wss.emit('connection', ws, request, auth)
             })
         })
-
-        if (handlers.onConnect) this.onConnect = handlers.onConnect
-
-        if (handlers.onClose) this.onClose = handlers.onClose
-
-        if (handlers.authenticate) this.authenticate = handlers.authenticate
-
-        this.onAck = handlers.onAck
-        this.onError = handlers.onError
-        this.onEvent = handlers.onEvent
 
         if (serverOptions?.timeout) this.ackTimeout = serverOptions?.timeout
 
@@ -103,9 +94,27 @@ export default class Server extends ParentClient implements EdcServer {
             case 'acknowledgement':
                 await this.onAck(new AckEvent(ievent as IAckEvent), ws, reply, send, this)
                 break
-            default:
-                await this.onEvent(new Event<any, any>(ievent as IEvent<any, any>), ws, reply, send, this)
+            default: {
+                const event = new Event<any, any>(ievent as IEvent<any, any>)
+                let onEventHandler = this.onEventHandlers.get(event.type)
+                if (!onEventHandler) {
+                    onEventHandler = this.onEventHandlers.get('*')
+                }
+
+                if (!onEventHandler) {
+                    await reply(new UnknownEventErrorEvent(event))
+                } else {
+                    await (<ServerOnEventHandler>onEventHandler)(event, ws, reply, send, this)
+                }
+                break
+            }
         }
+    }
+
+    public onEvent(eventType: string, handler: ServerOnEventHandler) {
+        if (eventType === undefined) return
+
+        this.onEventHandlers.set(eventType, handler)
     }
 
     public sendEvent(connection: WebSocket, event: IEvents) {

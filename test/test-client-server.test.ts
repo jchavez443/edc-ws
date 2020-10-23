@@ -1,37 +1,21 @@
 import 'mocha'
 import { assert } from 'chai'
 import { AckEvent, ErrorEvent, Event } from 'edc-events'
-import Edc, { ClientHandlers, ServerHandlers, AckedErrorEvent, TimeoutError, BasicAuth } from '../src'
+import Edc, { AckedErrorEvent, TimeoutError, UnknownEventErrorEvent } from '../src'
 
-const port = 8082
+const port = 8081
 
-const serverHandlers: ServerHandlers = {
-    onAck: async () => {},
-    onError: async () => {},
-    onEvent: async () => {},
-
-    onConnect: async (connection, auth, event, server) => {},
-    authenticate: (request) => {
-        const authHeader = request.headers.authorization || ''
-
-        const auth = new BasicAuth(authHeader)
-        auth.authenticated = true
-
-        return auth
-    }
-}
-
-const server = new Edc.Server(port, serverHandlers, {
+const server = new Edc.Server(port, {
     timeout: 500
 })
 
-const clientHandlers: ClientHandlers = {
-    onAck: async () => {},
-    onError: async () => {},
-    onEvent: async () => {}
-}
-const client = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
-const client2 = new Edc.Client(`ws://localhost:${port}`, clientHandlers, { timeout: 500 })
+server.onEvent('test-event', async (event, conn, reply, send, that) => {})
+
+const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
+const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
+
+client.onEvent('test-event', async (event, reply) => {})
+client2.onEvent('test-event', async (event, reply) => {})
 
 type Details = { foo: string; bar: number }
 type Shared = { who: string; where: string }
@@ -59,17 +43,14 @@ beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
     await client2.awaitReady()
 
-    server.onError = serverHandlers.onError
-    server.onAck = serverHandlers.onAck
-    server.onEvent = serverHandlers.onEvent
+    server.onError = async () => {}
+    server.onAck = async () => {}
 
-    client.onError = clientHandlers.onError
-    client.onAck = clientHandlers.onAck
-    client.onEvent = clientHandlers.onEvent
+    client.onError = async () => {}
+    client.onAck = async () => {}
 
-    client2.onError = clientHandlers.onError
-    client2.onAck = clientHandlers.onAck
-    client2.onEvent = clientHandlers.onEvent
+    client2.onError = async () => {}
+    client2.onAck = async () => {}
 })
 
 after('TearDown', async () => {
@@ -93,7 +74,7 @@ describe('Test Client & Server behavior', () => {
         assert(reply.trigger === event.id, 'Acknowledgemnt trigger != cause.id')
     })
     it('Client: event{ack: true} --> Server: error', async () => {
-        server.onEvent = async (cause, connection, reply) => {
+        server.onEvent('test-event', async (cause, connection, reply) => {
             const error = new ErrorEvent<{ type: string; test: number }>(cause, {
                 cn: 'cn',
                 code: 400,
@@ -104,7 +85,7 @@ describe('Test Client & Server behavior', () => {
                 message: 'This is the error'
             })
             reply(error)
-        }
+        })
 
         client.onError = async (cause) => {
             assert(cause, 'Cause is undefined')
@@ -137,9 +118,9 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Client: event{ack: true} --> Server: event', async () => {
-        server.onEvent = async (cause, connection, reply) => {
+        server.onEvent('test-event', async (cause, connection, reply) => {
             reply(new Event('test-event').inherit(cause))
-        }
+        })
 
         const event = new Event(`test-event`, {
             acknowledge: true
@@ -153,9 +134,9 @@ describe('Test Client & Server behavior', () => {
         assert(ack.type === 'test-event', 'Wasnt an event.type = "test-event"')
     })
     it('Client: event{ack: true} --> Server: no-reply', async () => {
-        server.onEvent = (cause, connection, reply) => {
+        server.onEvent('test-event', (cause, connection, reply) => {
             return new Promise((resolve, reject) => {})
-        }
+        })
 
         const event = new Event(`test-event`, {
             acknowledge: true
@@ -169,9 +150,9 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Client: event{ack: false} --> Server: event', async () => {
-        server.onEvent = async (cause, connection, reply) => {
+        server.onEvent('test-event', async (cause, connection, reply) => {
             reply(new Event('test-event').inherit(cause))
-        }
+        })
 
         const event = new Event(`test-event`, {
             acknowledge: false
@@ -182,9 +163,9 @@ describe('Test Client & Server behavior', () => {
         assert(!ack.event, 'Acknowledgemnt, event needs to be undefined')
     })
     it('Client: event{ack: false} --> Server: no-reply', async () => {
-        server.onEvent = async (cause, connection, reply, send) => {
+        server.onEvent('test-event', async (cause, connection, reply, send) => {
             return new Promise((resolve, reject) => {})
-        }
+        })
 
         const event = new Event(`test-event`, {
             acknowledge: false
@@ -208,7 +189,7 @@ describe('Test Client & Server behavior', () => {
         assert(ack.trigger === event.id, 'Ack trigger == event')
     })
     it('Server: event{ack: true} --> Client: error', async () => {
-        client.onEvent = async (cause, reply) => {
+        client.onEvent('test-event', async (cause, reply) => {
             const error = new ErrorEvent(cause, {
                 code: 400,
                 cn: 'cn',
@@ -216,7 +197,7 @@ describe('Test Client & Server behavior', () => {
                 data: null
             })
             reply(error)
-        }
+        })
 
         const event = new Event(`test-event`, {
             acknowledge: true
@@ -231,10 +212,10 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Server: event{ack: true} --> Client: event', async () => {
-        client.onEvent = async (cause, reply) => {
+        client.onEvent('test-event', async (cause, reply) => {
             const event = new Event('test-event').inherit(cause)
             reply(event)
-        }
+        })
 
         const cause = new Event(`test-event`, {
             acknowledge: true
@@ -246,9 +227,9 @@ describe('Test Client & Server behavior', () => {
         assert(event.trigger === cause.id)
     })
     it('Server: event{ack: true} --> Client: no-reply', async () => {
-        client.onEvent = (cause, reply) => {
+        client.onEvent('test-event', (cause, reply) => {
             return new Promise(() => {})
-        }
+        })
 
         const cause = new Event(`test-event`, {
             acknowledge: true
@@ -263,9 +244,9 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Server: event{ack: false} --> Client: event', async () => {
-        client.onEvent = async (cause, reply) => {
+        client.onEvent('test-event', async (cause, reply) => {
             return new Event('test-event').inherit(cause)
-        }
+        })
 
         const cause = new Event(`test-event`, {
             acknowledge: false
@@ -277,9 +258,9 @@ describe('Test Client & Server behavior', () => {
         assert(reply.async, 'the reply should not be async')
     })
     it('Server: event{ack: false} --> Client: no-reply', async () => {
-        client.onEvent = (cause, reply) => {
+        client.onEvent('test-event', (cause, reply) => {
             return new Promise(() => {})
-        }
+        })
 
         const cause = new Event(`test-event`, {
             acknowledge: true
@@ -294,11 +275,66 @@ describe('Test Client & Server behavior', () => {
         }
     })
 
+    it('Server: types --> Client: event', async () => {
+        server.onEvent('test-event-2', async (cause, conn, reply) => {
+            reply(new Event('success2').inherit(cause))
+        })
+
+        const cause = new Event(`test-event-2`, {
+            acknowledge: true
+        })
+
+        try {
+            const reply = await client.sendEvent(cause)
+            assert(reply.event, 'an event should be returned')
+            assert(reply.type === 'success2', 'The type returned should match new event path')
+            assert(reply.event?.trigger === cause.id, 'trigger should match cause id')
+        } catch (e) {
+            assert(false, 'No error should be thrown')
+        }
+    })
+    it('Server: types --> Client: unknown event', async () => {
+        const cause = new Event(`test-event-unknown`, {
+            acknowledge: true
+        })
+
+        try {
+            const reply = await client.sendEvent(cause)
+            assert(false, 'an event should NOT be returned')
+        } catch (e) {
+            assert(e, 'Error should be thrown')
+            assert(e instanceof AckedErrorEvent, 'Error should be of type AckedErrorEvent')
+
+            const err = e as AckedErrorEvent<any>
+            const actual = new UnknownEventErrorEvent(cause)
+            assert(err.code === actual.details.code)
+            assert(err.cn === actual.details.cn)
+        }
+    })
+    it('Server: types --> Client: * event', async () => {
+        server.onEvent('*', async (cause, conn, reply) => {
+            reply(new Event('success-any').inherit(cause))
+        })
+
+        const cause = new Event(`test-event-any`, {
+            acknowledge: true
+        })
+
+        try {
+            const reply = await client.sendEvent(cause)
+            assert(reply.event, 'an event should be returned')
+            assert(reply.type === 'success-any', 'The type returned should match new event path')
+            assert(reply.event?.trigger === cause.id, 'trigger should match cause id')
+        } catch (e) {
+            assert(false, 'Error should not be thrown')
+        }
+    })
+
     it('Server: onEvent', async () => {
-        server.onEvent = async (cause, ws, reply, send) => {
+        server.onEvent(commonEvent.type, async (cause, ws, reply, send) => {
             const event = cause.caused('new-event')
             reply(event)
-        }
+        })
 
         const reply = await client.sendEvent(commonEvent)
 

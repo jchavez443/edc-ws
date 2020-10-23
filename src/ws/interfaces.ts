@@ -1,6 +1,6 @@
-import { ClientHandlers, ClientSendEvent } from './client'
-import { ServerHandlers, ServerSendEvent } from './server'
+import { ClientOnEventHandler, ClientSendEvent } from './client'
+import { ServerOnEventHandler, ServerSendEvent } from './server'
 
 export type SendEvent = ClientSendEvent | ServerSendEvent
 
-export type Handlers = ServerHandlers | ClientHandlers
+export type OnEventHandlers = ServerOnEventHandler | ClientOnEventHandler
