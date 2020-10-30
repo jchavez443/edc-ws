@@ -32,7 +32,7 @@ export default class Server extends ParentClient implements EdcServer {
 
     onClose: ServerOnClose = async () => {}
 
-    authenticate: ServerAuthenticate = () => {
+    authenticate: ServerAuthenticate = async () => {
         return { authenticated: true }
     }
 
@@ -45,8 +45,8 @@ export default class Server extends ParentClient implements EdcServer {
             this.server = http.createServer(serverOptions?.htpServerOptions || {})
         }
 
-        this.server.on('upgrade', (request, socket, head) => {
-            const auth: Auth = this.authenticate(request)
+        this.server.on('upgrade', async (request, socket, head) => {
+            const auth: Auth = await this.authenticate(request)
 
             if (!auth.authenticated) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')

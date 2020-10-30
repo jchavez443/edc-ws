@@ -3,7 +3,6 @@ import { AckEvent, ErrorEvent, IEvents, Events, Event, IEvent, IErrorEvent, IAck
 import ParentClient from '../parent-client'
 // eslint-disable-next-line prettier/prettier
 import {
-    ClientHandlers,
     ClientOnAck,
     ClientOnClose,
     ClientOnConnect,

@@ -35,13 +35,13 @@ describe('Test Routes Register', () => {
         assert(reply2.event, `Reply2 should have an event but was ${reply2.event}`)
 
         assert(
-            reply1.event.type === 'answer-route-1',
-            `The reply should have been 'answer-route-1' but was ${reply1.event.type} `
+            reply1.event?.type === 'answer-route-1',
+            `The reply should have been 'answer-route-1' but was ${reply1.event?.type} `
         )
 
         assert(
-            reply2.event.type === 'answer-route-2',
-            `The reply should have been 'answer-route-2' but was ${reply2.event.type} `
+            reply2.event?.type === 'answer-route-2',
+            `The reply should have been 'answer-route-2' but was ${reply2.event?.type} `
         )
     })
     it('Check the sub routes work', async () => {
@@ -57,13 +57,13 @@ describe('Test Routes Register', () => {
         assert(reply2.event, `Reply2 should have an event but was ${reply2.event}`)
 
         assert(
-            reply1.event.type === 'answer-route-sub-1',
-            `The reply should have been 'answer-route-sub-1' but was ${reply1.event.type} `
+            reply1.event?.type === 'answer-route-sub-1',
+            `The reply should have been 'answer-route-sub-1' but was ${reply1.event?.type} `
         )
 
         assert(
-            reply2.event.type === 'answer-route-sub-2',
-            `The reply should have been 'answer-route-sub-1' but was ${reply2.event.type} `
+            reply2.event?.type === 'answer-route-sub-2',
+            `The reply should have been 'answer-route-sub-1' but was ${reply2.event?.type} `
         )
     })
 })
