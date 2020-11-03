@@ -9,11 +9,13 @@ const port = 8085
 
 const server = new Edc.Server(port)
 server.register(routes)
+server.listen()
 
 const client = new Edc.Client(`ws://localhost:${port}`)
 client.onEvent('*', async () => {})
+client.start()
 
-beforeEach(`Clear events an await connections`, async () => {
+beforeEach(`Clear events and await client connection`, async () => {
     await client.awaitReady()
 })
 

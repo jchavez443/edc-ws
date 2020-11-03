@@ -10,9 +10,10 @@ const server = new Edc.Server(port, {
 })
 
 server.onEvent('test-event', async (event, conn, reply, send, that) => {})
+server.listen()
 
-const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
-const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
+const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 }).start()
+const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 }).start()
 
 client.onEvent('test-event', async (event, reply) => {})
 client2.onEvent('test-event', async (event, reply) => {})
@@ -182,7 +183,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const connection = server.wss.clients.values().next().value
+        const connection = server.wss?.clients.values().next().value
         const ack = await server.sendEvent(connection, event)
 
         assert(ack, 'Acknowledgemnt undefined')
@@ -204,7 +205,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             const error = await server.sendEvent(connection, event)
             assert(error || !error, 'Error should have been thrown by server')
         } catch (e) {
@@ -221,7 +222,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const connection = server.wss.clients.values().next().value
+        const connection = server.wss?.clients.values().next().value
         const event = await server.sendEvent(connection, cause)
         assert(event, 'An event should have been returned')
         assert(event.trigger === cause.id)
@@ -236,7 +237,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             const event = await server.sendEvent(connection, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
@@ -252,7 +253,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: false
         })
 
-        const info = server.wss.clients.values().next().value
+        const info = server.wss?.clients.values().next().value
         const reply = await server.sendEvent(info, cause)
         assert(!reply.event, 'An NO event should be returned')
         assert(reply.async, 'the reply should not be async')
@@ -267,7 +268,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const info = server.wss.clients.values().next().value
+            const info = server.wss?.clients.values().next().value
             const event = await server.sendEvent(info, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
@@ -382,7 +383,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badJson)
             assert(!ack.event, 'Should have no event')
@@ -413,7 +414,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badObject)
             assert(!ack.event, 'Should have no event')
@@ -448,7 +449,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badObject)
             assert(!ack.event, 'Should have no event')
@@ -480,7 +481,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
             const ack = await server.sendEvent(connection, badObject)
             assert(false, 'Object has no id but an ack.  Timeout should have been thrown.')

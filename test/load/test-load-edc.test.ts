@@ -9,9 +9,12 @@ const server = new Edc.Server(port, {
     timeout: 500
 })
 server.onEvent('test-event', async () => {})
+server.listen()
 
 const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
 const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
+client.start()
+client2.start()
 
 beforeEach(`Clear events an await connections`, async () => {
     await client.awaitReady()
@@ -93,6 +96,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= 25; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 1000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -142,6 +146,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 1000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -193,6 +198,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 1000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -244,6 +250,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 1000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -295,6 +302,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 1000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -345,6 +353,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 50000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -396,6 +405,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 50000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -447,6 +457,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 50000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
@@ -498,6 +509,7 @@ describe('Test Client & Server loads', () => {
 
         for (let i = 0; i <= numberOfClients; i += 1) {
             const temp = new Edc.Client(`ws://localhost:${port}`, { timeout: 50000 })
+            temp.start()
             clients.push(temp)
             awaitReadys.push(temp.awaitReady())
         }
