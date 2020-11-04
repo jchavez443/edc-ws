@@ -30,9 +30,9 @@ export default abstract class ParentClient {
     onClose: ServerOnClose | ClientOnClose = async () => {}
 
     protected async onMessage(ws: WebSocket, msgEvent: MessageEvent) {
-        let ievent
+        let event
         try {
-            ievent = JSON.parse(msgEvent.data.toString())
+            event = JSON.parse(msgEvent.data.toString())
         } catch (e) {
             console.log(msgEvent.data)
             // Invalid JSON reply
@@ -40,26 +40,30 @@ export default abstract class ParentClient {
             return
         }
 
-        if (!EdcValidator.validate(ievent)) {
+        if (!EdcValidator.validate(event)) {
             // Invalid Event Object
-            this.send(ws, new InvalidEventErrorEvent(ievent))
+            this.send(ws, new InvalidEventErrorEvent(event))
             return
         }
 
-        this.preOnEvent(ievent, ws)
+        const ievent = <IEvent<any, any>>event
 
-        await this.handleEvent(ievent, ws)
+        if (ievent.acknowledge) {
+            this.incomingAcks.add(ws, ievent.id)
+        }
+
+        if (ievent.trigger && this.requestedAcks.has(ws, ievent.trigger)) {
+            this.handleRequestedAck(ievent, ws)
+        } else {
+            await this.handleEvent(ievent, ws)
+        }
 
         if (ievent.acknowledge && this.incomingAcks.has(ws, ievent.id)) {
             this.send(ws, new AckEvent(ievent))
         }
     }
 
-    private preOnEvent(ievent: IEvents, websocket: WebSocket) {
-        if ((ievent as IEvent<any, any>).acknowledge) {
-            this.incomingAcks.add(websocket, ievent.id)
-        }
-
+    private handleRequestedAck(ievent: IEvent<any, any>, websocket: WebSocket) {
         if (ievent.trigger === undefined || !this.requestedAcks.has(websocket, ievent.trigger)) return
 
         const tuple = this.requestedAcks.get(websocket, ievent.trigger)
