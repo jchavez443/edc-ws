@@ -10,9 +10,10 @@ const server = new Edc.Server(port, {
 })
 
 server.onEvent('test-event', async (event, conn, reply, send, that) => {})
+server.listen()
 
-const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
-const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 })
+const client = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 }).start()
+const client2 = new Edc.Client(`ws://localhost:${port}`, { timeout: 500 }).start()
 
 client.onEvent('test-event', async (event, reply) => {})
 client2.onEvent('test-event', async (event, reply) => {})
@@ -182,7 +183,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const connection = server.wss.clients.values().next().value
+        const connection = server.wss?.clients.values().next().value
         const ack = await server.sendEvent(connection, event)
 
         assert(ack, 'Acknowledgemnt undefined')
@@ -204,7 +205,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             const error = await server.sendEvent(connection, event)
             assert(error || !error, 'Error should have been thrown by server')
         } catch (e) {
@@ -221,7 +222,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: true
         })
 
-        const connection = server.wss.clients.values().next().value
+        const connection = server.wss?.clients.values().next().value
         const event = await server.sendEvent(connection, cause)
         assert(event, 'An event should have been returned')
         assert(event.trigger === cause.id)
@@ -236,7 +237,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
+            const connection = server.wss?.clients.values().next().value
             const event = await server.sendEvent(connection, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
@@ -252,7 +253,7 @@ describe('Test Client & Server behavior', () => {
             acknowledge: false
         })
 
-        const info = server.wss.clients.values().next().value
+        const info = server.wss?.clients.values().next().value
         const reply = await server.sendEvent(info, cause)
         assert(!reply.event, 'An NO event should be returned')
         assert(reply.async, 'the reply should not be async')
@@ -267,7 +268,7 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const info = server.wss.clients.values().next().value
+            const info = server.wss?.clients.values().next().value
             const event = await server.sendEvent(info, cause)
             assert(!event, 'A timeout error should have been thrown')
         } catch (e) {
@@ -366,13 +367,16 @@ describe('Test Client & Server behavior', () => {
         assert(reply.async, 'Reply should be async')
     })
 
-    it('Server: Invalid Request --> Client: Invalid Event Error', async () => {
+    it('Client: Invalid Request --> Server: Invalid Event Error', async () => {
         const badJson = '{ error: not json }'
 
         const trip = new Promise((resolve, reject) => {
-            server.onError = async (cause, reply) => {
+            client.onError = async (cause, reply) => {
                 try {
-                    assert(cause.details.code === 32600, 'code should match Invalid JSON code')
+                    assert(
+                        cause.details.code === 32600,
+                        `code should match Invalid JSON code 32600: ${cause.details.code}`
+                    )
                     assert(cause.details.failed === badJson)
                     resolve()
                 } catch (e) {
@@ -382,9 +386,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
-            const ack = await server.sendEvent(connection, badJson)
+            const ack = await client.sendEvent(badJson)
             assert(!ack.event, 'Should have no event')
             assert(ack.async, 'Reply should be async')
         } catch (e) {
@@ -394,14 +397,14 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-    it('Server: Invalid Request --> Client: Invalid Event Error V2', async () => {
+    it('Client: Invalid Request --> Server: Invalid Event Error V2', async () => {
         const badObject = {
             test: 'this is not needed',
             test2: 'we are missing some items'
         }
 
         const trip = new Promise((resolve, reject) => {
-            server.onError = async (cause, reply) => {
+            client.onError = async (cause, reply) => {
                 try {
                     assert(cause.details.code === 32600, 'code should match Invalid Event code')
                     assert(cause.details.failed === JSON.stringify(badObject))
@@ -413,9 +416,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
-            const ack = await server.sendEvent(connection, badObject)
+            const ack = await client.sendEvent(badObject)
             assert(!ack.event, 'Should have no event')
             assert(ack.async, 'Reply should be async')
         } catch (e) {
@@ -425,7 +427,7 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-    it('Server: Invalid Error Request --> Client: Invalid Event Error Obj', async () => {
+    it('Client: Invalid Error Request --> Server: Invalid Event Error Obj', async () => {
         const badObject = {
             edc: '1.0',
             id: 'id',
@@ -436,7 +438,7 @@ describe('Test Client & Server behavior', () => {
         }
 
         const trip = new Promise((resolve, reject) => {
-            server.onError = async (cause, reply) => {
+            client.onError = async (cause, reply) => {
                 try {
                     assert(cause.details.code === 32600, 'code should match Invalid Event code')
                     assert(cause.details.failed === JSON.stringify(badObject))
@@ -448,9 +450,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
-            const ack = await server.sendEvent(connection, badObject)
+            const ack = await client.sendEvent(badObject)
             assert(!ack.event, 'Should have no event')
             assert(ack.async, 'Reply should be async')
         } catch (e) {
@@ -460,7 +461,7 @@ describe('Test Client & Server behavior', () => {
             assert(false, msg)
         })
     })
-    it('Server: Invalid Request w/ ACk --> Client: Invalid Event Error Obj', async () => {
+    it('Client: Invalid Request w/ ACk --> Server: Invalid Event Error Obj', async () => {
         const badObject = {
             edc: '1.0',
             type: 'bad-test-event-with-ack',
@@ -468,7 +469,7 @@ describe('Test Client & Server behavior', () => {
         }
 
         const trip = new Promise((resolve, reject) => {
-            server.onError = async (cause, reply) => {
+            client.onError = async (cause, reply) => {
                 try {
                     assert(cause.details.code === 32600, 'code should match Invalid Event code')
                     assert(cause.details.failed === JSON.stringify(badObject))
@@ -480,9 +481,8 @@ describe('Test Client & Server behavior', () => {
         })
 
         try {
-            const connection = server.wss.clients.values().next().value
             // @ts-ignore // Need to ignore for this test
-            const ack = await server.sendEvent(connection, badObject)
+            const ack = await client.sendEvent(badObject)
             assert(false, 'Object has no id but an ack.  Timeout should have been thrown.')
         } catch (e) {
             if (e instanceof TimeoutError) {

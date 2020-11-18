@@ -3,7 +3,6 @@ import { AckEvent, ErrorEvent, IEvents, Events, Event, IEvent, IErrorEvent, IAck
 import ParentClient from '../parent-client'
 // eslint-disable-next-line prettier/prettier
 import {
-    ClientHandlers,
     ClientOnAck,
     ClientOnClose,
     ClientOnConnect,
@@ -16,7 +15,7 @@ import { UnknownEventErrorEvent } from '../errors'
 
 // eslint-disable-next-line import/prefer-default-export
 export default class Client extends ParentClient implements EdcClient {
-    ws: WebSocket
+    ws?: WebSocket
 
     onError: ClientOnError = async () => {}
 
@@ -26,25 +25,38 @@ export default class Client extends ParentClient implements EdcClient {
 
     onClose: ClientOnClose = async () => {}
 
+    private url: string
+
+    private options?: ClientOptions
+
     constructor(url: string, options?: ClientOptions) {
         super()
 
-        if (options?.timeout) this.ackTimeout = options?.timeout
+        this.url = url
+        this.options = options
 
-        this.ws = new WebSocket(url, {
-            auth: options?.auth
+        if (options?.timeout) this.ackTimeout = options?.timeout
+    }
+
+    public start() {
+        this.ws = new WebSocket(this.url, {
+            auth: this.options?.auth
         })
 
         this.ws.onopen = (event) => {
+            if (this.ws === undefined) throw new Error(`Websocket === ${this.ws}, on this.ws`)
             this.onConnect(this, this.ws, event)
         }
         this.ws.onmessage = (event) => {
+            if (this.ws === undefined) throw new Error(`Websocket === ${this.ws}, on this.ws`)
             this.onMessage(this.ws, event)
         }
         this.ws.onclose = (event) => {
+            if (this.ws === undefined) throw new Error(`Websocket === ${this.ws}, on this.ws`)
             this.onClose(this, this.ws, event)
             this.cleanUp(this.ws)
         }
+        return this
     }
 
     protected async handleEvent(ievent: IEvents) {
@@ -76,6 +88,16 @@ export default class Client extends ParentClient implements EdcClient {
         }
     }
 
+    // eslint-disable-next-line class-methods-use-this
+    protected async onInvalidJson() {
+        console.log(`Invalid JSON received`)
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    protected async onInvalidEvent() {
+        console.log(`Invalid EDC Event received`)
+    }
+
     public onEvent(eventType: string, handler: ClientOnEventHandler) {
         if (eventType === undefined) return
 
@@ -83,14 +105,19 @@ export default class Client extends ParentClient implements EdcClient {
     }
 
     public sendEvent(event: Events) {
+        if (this.ws === undefined) throw new Error(`Websocket === ${this.ws}, on this.ws`)
         return this.send(this.ws, event)
     }
 
     public async awaitReady(): Promise<void> {
         let count = 0
 
+        if (this.ws === undefined) {
+            return Promise.reject(new Error('Did NOT start the Client'))
+        }
+
         const check = (resolve: any, reject: any) => {
-            if (this.ws.readyState === WebSocket.OPEN) {
+            if (this.ws?.readyState === WebSocket.OPEN) {
                 resolve()
             } else if (count < 10) {
                 count += 1
@@ -104,11 +131,11 @@ export default class Client extends ParentClient implements EdcClient {
     }
 
     public close(): Promise<void> {
-        this.ws.close()
+        this.ws?.close()
         let count = 0
 
         const check = (resolve: any, reject: any) => {
-            if (this.ws.readyState === WebSocket.CLOSED) {
+            if (this.ws?.readyState === WebSocket.CLOSED) {
                 resolve()
             } else if (count < 3) {
                 count += 1

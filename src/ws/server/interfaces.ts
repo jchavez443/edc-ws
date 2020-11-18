@@ -21,7 +21,7 @@ export interface EdcServer extends ParentClient {
     authenticate: ServerAuthenticate
 }
 
-export type ServerAuthenticate = (request: IncomingMessage) => Auth
+export type ServerAuthenticate = (request: IncomingMessage) => Promise<Auth>
 
 export type ServerSendEvent = (connection: WebSocket, event: Events) => Promise<AckReply>
 export type ServerReplyEvent = (event: Events) => Promise<AckReply>

@@ -14,15 +14,15 @@ import {
     ServerOptions
 } from './interfaces'
 import { Auth } from './authentication/interfaces'
-import { UnknownEventErrorEvent } from '../errors'
+import { InvalidEventErrorEvent, InvalidJsonErrorEvent, UnknownEventErrorEvent } from '../errors'
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 
 // eslint-disable-next-line import/prefer-default-export
 export default class Server extends ParentClient implements EdcServer {
-    wss: WebSocket.Server
+    wss?: WebSocket.Server
 
-    server: http.Server | https.Server
+    server?: http.Server | https.Server
 
     onError: ServerOnError = async () => {}
 
@@ -32,21 +32,38 @@ export default class Server extends ParentClient implements EdcServer {
 
     onClose: ServerOnClose = async () => {}
 
-    authenticate: ServerAuthenticate = () => {
+    authenticate: ServerAuthenticate = async () => {
         return { authenticated: true }
     }
+
+    private port: number
+
+    private serverOptions?: ServerOptions
 
     constructor(port: number, serverOptions?: ServerOptions) {
         super()
 
-        if (serverOptions?.https) {
-            this.server = https.createServer(serverOptions?.htpServerOptions || {})
+        this.port = port
+
+        this.serverOptions = serverOptions
+    }
+
+    public listen() {
+        if (this.serverOptions?.https) {
+            this.server = https.createServer(this.serverOptions?.htpServerOptions || {})
         } else {
-            this.server = http.createServer(serverOptions?.htpServerOptions || {})
+            this.server = http.createServer(this.serverOptions?.htpServerOptions || {})
         }
 
-        this.server.on('upgrade', (request, socket, head) => {
-            const auth: Auth = this.authenticate(request)
+        this.server.on('upgrade', async (request, socket, head) => {
+            let auth: Auth
+            try {
+                auth = await this.authenticate(request)
+            } catch (e) {
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+                socket.destroy()
+                return
+            }
 
             if (!auth.authenticated) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
@@ -54,12 +71,12 @@ export default class Server extends ParentClient implements EdcServer {
                 return
             }
 
-            this.wss.handleUpgrade(request, socket, head, (ws) => {
-                this.wss.emit('connection', ws, request, auth)
+            this.wss?.handleUpgrade(request, socket, head, (ws) => {
+                this.wss?.emit('connection', ws, request, auth)
             })
         })
 
-        if (serverOptions?.timeout) this.ackTimeout = serverOptions?.timeout
+        if (this.serverOptions?.timeout) this.ackTimeout = this.serverOptions?.timeout
 
         this.wss = new WebSocket.Server({ noServer: true })
 
@@ -75,7 +92,7 @@ export default class Server extends ParentClient implements EdcServer {
             this.onConnect(ws, auth, request, this)
         })
 
-        this.server.listen(port)
+        this.server.listen(this.port)
     }
 
     protected async handleEvent(ievent: IEvents, ws: WebSocket) {
@@ -111,6 +128,14 @@ export default class Server extends ParentClient implements EdcServer {
         }
     }
 
+    protected async onInvalidJson(ws: WebSocket, message: string) {
+        this.send(ws, new InvalidJsonErrorEvent(message))
+    }
+
+    protected async onInvalidEvent(ws: WebSocket, obj: any) {
+        this.send(ws, new InvalidEventErrorEvent(obj))
+    }
+
     public onEvent(eventType: string, handler: ServerOnEventHandler) {
         if (eventType === undefined) return
 
@@ -122,9 +147,9 @@ export default class Server extends ParentClient implements EdcServer {
     }
 
     public broadCast(event: Events) {
-        const connections = this.wss.clients
+        const connections = this.wss?.clients
 
-        connections.forEach((conn) => {
+        connections?.forEach((conn) => {
             this.send(conn, event)
         })
     }
@@ -132,11 +157,11 @@ export default class Server extends ParentClient implements EdcServer {
     public close(): Promise<void> {
         return new Promise((resolve, reject) => {
             console.log(`closing...`)
-            this.wss.close((err) => {
+            this.wss?.close((err) => {
                 console.log(`WS Server closed...`)
 
                 if (err) reject(err)
-                this.server.close((err2) => {
+                this.server?.close((err2) => {
                     console.log(`Server closed...`)
 
                     if (err2) reject(err2)
