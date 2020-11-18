@@ -144,7 +144,7 @@ const cause = new Event('event-type', {
 const event = new Event('event-type-2').inherit(cause)
 
 // event.trigger === cause.id
-// event.shared === cause.shared
+// event.shared === cause.shared 
 
 ```
 
