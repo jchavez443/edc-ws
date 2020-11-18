@@ -1,6 +1,6 @@
 {
   "name": "edc-ws",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Event Driven Communications WebSocket Server & Client",
   "main": "out/src/index.js",
   "types": "out/src/index.d.ts",

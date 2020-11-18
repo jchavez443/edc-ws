@@ -5,7 +5,7 @@ import WebSocket, { MessageEvent } from 'ws'
 import { AckEvent, EdcValidator, ErrorEvent, Event, IErrorEvent, IEvent, IEvents } from 'edc-events'
 import { ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError } from './server'
-import { AckedErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
+import { AckedErrorEvent, TimeoutError } from './errors'
 import AckReply from './ack-reply'
 import { OnEventHandlers, Route } from './interfaces'
 
