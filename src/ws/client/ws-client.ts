@@ -88,6 +88,16 @@ export default class Client extends ParentClient implements EdcClient {
         }
     }
 
+    // eslint-disable-next-line class-methods-use-this
+    protected async onInvalidJson() {
+        console.log(`Invalid JSON received`)
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    protected async onInvalidEvent() {
+        console.log(`Invalid EDC Event received`)
+    }
+
     public onEvent(eventType: string, handler: ClientOnEventHandler) {
         if (eventType === undefined) return
 

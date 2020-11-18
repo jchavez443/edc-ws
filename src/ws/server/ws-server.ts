@@ -14,7 +14,7 @@ import {
     ServerOptions
 } from './interfaces'
 import { Auth } from './authentication/interfaces'
-import { UnknownEventErrorEvent } from '../errors'
+import { InvalidEventErrorEvent, InvalidJsonErrorEvent, UnknownEventErrorEvent } from '../errors'
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 
@@ -126,6 +126,14 @@ export default class Server extends ParentClient implements EdcServer {
                 break
             }
         }
+    }
+
+    protected async onInvalidJson(ws: WebSocket, message: string) {
+        this.send(ws, new InvalidJsonErrorEvent(message))
+    }
+
+    protected async onInvalidEvent(ws: WebSocket, obj: any) {
+        this.send(ws, new InvalidEventErrorEvent(obj))
     }
 
     public onEvent(eventType: string, handler: ServerOnEventHandler) {

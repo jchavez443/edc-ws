@@ -5,7 +5,7 @@ import WebSocket, { MessageEvent } from 'ws'
 import { AckEvent, EdcValidator, ErrorEvent, Event, IErrorEvent, IEvent, IEvents } from 'edc-events'
 import { ClientOnError, ClientOnAck, ClientOnConnect, ClientOnClose } from './client'
 import { ServerOnAck, ServerOnClose, ServerOnConnect, ServerOnError } from './server'
-import { AckedErrorEvent, InvalidEventErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
+import { AckedErrorEvent, InvalidJsonErrorEvent, TimeoutError } from './errors'
 import AckReply from './ack-reply'
 import { OnEventHandlers, Route } from './interfaces'
 
@@ -34,15 +34,14 @@ export default abstract class ParentClient {
         try {
             event = JSON.parse(msgEvent.data.toString())
         } catch (e) {
-            console.log(msgEvent.data)
             // Invalid JSON reply
-            this.send(ws, new InvalidJsonErrorEvent(msgEvent.data.toString()))
+            this.onInvalidJson(ws, msgEvent.data.toString())
             return
         }
 
         if (!EdcValidator.validate(event)) {
             // Invalid Event Object
-            this.send(ws, new InvalidEventErrorEvent(event))
+            this.onInvalidEvent(ws, event)
             return
         }
 
@@ -123,6 +122,10 @@ export default abstract class ParentClient {
     }
 
     public abstract onEvent(eventType: string, handler: OnEventHandlers): void
+
+    protected abstract onInvalidJson(ws: WebSocket, message: string): Promise<void>
+
+    protected abstract onInvalidEvent(ws: WebSocket, obj: any): Promise<void>
 
     protected abstract handleEvent(event: any, ws: WebSocket): Promise<void>
 
