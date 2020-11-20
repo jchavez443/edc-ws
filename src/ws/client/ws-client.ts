@@ -64,6 +64,16 @@ export default class Client extends ParentClient implements EdcClient {
             return this.sendEvent(newEvent)
         }
 
+        if (ievent.trigger && this.awaitHandlers.has(ievent.trigger)) {
+            const awaitHandler = this.awaitHandlers.get(ievent.trigger)
+            if (awaitHandler) {
+                const event = new Event<any, any>(ievent as IEvent<any, any>)
+                await (<ClientOnEventHandler>awaitHandler)(event, reply)
+                return // Stop execution, only need to handler the trigger.... for now
+                // can see some value to allowing double handling of an event.
+            }
+        }
+
         switch (ievent.type) {
             case 'error':
                 await this.onError(new ErrorEvent(ievent as IErrorEvent<any>), reply)
@@ -102,6 +112,12 @@ export default class Client extends ParentClient implements EdcClient {
         if (eventType === undefined) return
 
         this.onEventHandlers.set(eventType, handler)
+    }
+
+    public awaitTrigger(trigger: string, handler: ClientOnEventHandler) {
+        if (trigger === undefined) return
+
+        this.awaitHandlers.set(trigger, handler)
     }
 
     public sendEvent(event: Events) {

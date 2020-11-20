@@ -20,17 +20,17 @@ export interface EdcClient extends ParentClient {
 
 export type ClientSendEvent = (event: Events) => Promise<AckReply>
 
-export type ClientOnEventHandler = (event: Event<any, any>, reply: ClientSendEvent) => Promise<any>
+export type ClientOnEventHandler = (event: Event<any, any>, reply: ClientSendEvent) => Promise<any> | any
 
 export type ClientOnEvent = (eventType: string, handler: ClientOnEventHandler) => void
 
-export type ClientOnError = (event: ErrorEvent<any>, reply: ClientSendEvent) => Promise<any>
+export type ClientOnError = (event: ErrorEvent<any>, reply: ClientSendEvent) => Promise<any> | any
 
-export type ClientOnAck = (event: AckEvent, reply: ClientSendEvent) => Promise<any>
+export type ClientOnAck = (event: AckEvent, reply: ClientSendEvent) => Promise<any> | any
 
-export type ClientOnConnect = (client: EdcClient, ws: WebSocket, event: OpenEvent) => Promise<any>
+export type ClientOnConnect = (client: EdcClient, ws: WebSocket, event: OpenEvent) => Promise<any> | any
 
-export type ClientOnClose = (client: EdcClient, ws: WebSocket, event: WebSocket.CloseEvent) => Promise<any>
+export type ClientOnClose = (client: EdcClient, ws: WebSocket, event: WebSocket.CloseEvent) => Promise<any> | any
 
 export interface ClientOptions {
     auth?: string

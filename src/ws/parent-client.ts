@@ -21,6 +21,8 @@ export default abstract class ParentClient {
 
     protected onEventHandlers: Map<string, OnEventHandlers> = new Map()
 
+    protected awaitHandlers: Map<string, OnEventHandlers> = new Map()
+
     abstract onError: ServerOnError | ClientOnError
 
     abstract onAck: ServerOnAck | ClientOnAck
@@ -122,6 +124,12 @@ export default abstract class ParentClient {
     }
 
     public abstract onEvent(eventType: string, handler: OnEventHandlers): void
+
+    public abstract awaitTrigger(trigger: string, handler: OnEventHandlers): void
+
+    public removeAwaitTrigger(trigger: string) {
+        this.awaitHandlers.delete(trigger)
+    }
 
     protected abstract onInvalidJson(ws: WebSocket, message: string): Promise<void>
 
