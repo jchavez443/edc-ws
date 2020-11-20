@@ -158,6 +158,20 @@ server.onEvent('*', async (cause, ws, reply, send, that) => {
 })
 ``` 
 
+Set a handler to wait for a trigger id
+```ts
+client.awaitTrigger('triggerId', (event) => {
+    // handle events with event.trigger === 'triggerId'
+})
+
+// remove the handler
+client.removeAwaitTrigger('triggerId')
+```
+> **Note:** `awaitTrigger()` sets a handler for all events with the matching trigger.
+> The incoming events do NOT continue to the onEvent handlers.
+> Caution when using with events that have acknowledge == true. first reply will be sent to the `await sendEvent()` return.
+
+
 ## Table of Contents
 
 <!-- TOC -->
