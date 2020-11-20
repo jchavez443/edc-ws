@@ -32,7 +32,7 @@ export class AckedErrorEvent<T> extends Error {
 
     code: number
 
-    failed: string
+    failed?: string
 
     constructor(error: IErrorEvent<T>) {
         super(`Caught ErrorEvent:  ${error.details.message}`)

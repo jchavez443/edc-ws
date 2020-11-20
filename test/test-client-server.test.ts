@@ -66,7 +66,7 @@ describe('Test Client & Server behavior', () => {
 
         const reply = await client.sendEvent(event)
 
-        if (!reply.async && reply.event){
+        if (!reply.async && reply.event) {
             assert(reply.event.type, 'Has type')
         }
 
@@ -333,14 +333,14 @@ describe('Test Client & Server behavior', () => {
 
     it('Server: onEvent', async () => {
         server.onEvent(commonEvent.type, async (cause, ws, reply, send) => {
-            const event = cause.caused('new-event')
+            const event = cause.caused(new Event('new-event'))
             reply(event)
         })
 
         const reply = await client.sendEvent(commonEvent)
 
         if (reply.event) {
-            const newEvent = reply.event.caused('final')
+            const newEvent = reply.event.caused(new Event('final'))
             assert(newEvent.trigger === reply.id, 'new event trigger === reply id')
         } else {
             // either async or an ACK

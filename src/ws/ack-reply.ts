@@ -35,7 +35,7 @@ export default class AckReply {
         }
 
         if (event.type !== AckEvent.type) {
-            this.event = new Event(event)
+            this.event = new Event(<IEvent<any, any>>event)
         }
     }
 }
