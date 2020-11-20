@@ -277,7 +277,7 @@ describe('Test Client & Server behavior', () => {
     })
 
     it('Server: types --> Client: event', async () => {
-        server.onEvent('test-event-2', async (cause, conn, reply) => {
+        server.onEvent('test-event-2', (cause, conn, reply) => {
             reply(new Event('success2').inherit(cause))
         })
 
@@ -313,7 +313,7 @@ describe('Test Client & Server behavior', () => {
         }
     })
     it('Server: types --> Client: * event', async () => {
-        server.onEvent('*', async (cause, conn, reply) => {
+        server.onEvent('*', (cause, conn, reply) => {
             reply(new Event('success-any').inherit(cause))
         })
 
@@ -328,6 +328,34 @@ describe('Test Client & Server behavior', () => {
             assert(reply.event?.trigger === cause.id, 'trigger should match cause id')
         } catch (e) {
             assert(false, 'Error should not be thrown')
+        }
+    })
+
+    it('Client awaitTrigger(trigger) --> server', async () => {
+        server.onEvent('*', (cause, conn, reply) => {
+            reply(new Event('success-any').inherit(cause))
+        })
+
+        const cause = new Event(`test-event-any`)
+
+        const trip = new Promise((resolve, reject) => {
+            client.awaitTrigger(cause.id, (event) => {
+                try {
+                    assert(event.trigger === cause.id, 'The awaitTrigger did not catch the trigger id')
+                    resolve()
+                } catch (e) {
+                    reject(e.message)
+                }
+            })
+        })
+
+        try {
+            const reply = await client.sendEvent(cause)
+            assert(reply.async, 'Reply should be async')
+
+            await trip
+        } catch (e) {
+            assert(false, e.message)
         }
     })
 

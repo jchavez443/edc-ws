@@ -34,7 +34,7 @@ export type ServerOnEventHandler = (
     reply: ServerReplyEvent,
     send: ServerSendEvent,
     server: EdcServer
-) => Promise<any>
+) => Promise<any> | any
 
 export type ServerOnEvent = (eventType: string, handler: ServerOnEventHandler) => void
 
@@ -44,7 +44,7 @@ export type ServerOnError = (
     reply: ServerReplyEvent,
     send: ServerSendEvent,
     server: EdcServer
-) => Promise<any>
+) => Promise<any> | any
 
 export type ServerOnAck = (
     event: AckEvent,
@@ -52,16 +52,16 @@ export type ServerOnAck = (
     reply: ServerReplyEvent,
     send: ServerSendEvent,
     server: EdcServer
-) => Promise<any>
+) => Promise<any> | any
 
 export type ServerOnConnect = (
     connection: WebSocket,
     auth: Auth,
     event: IncomingMessage,
     server: EdcServer
-) => Promise<any>
+) => Promise<any> | any
 
-export type ServerOnClose = (event: WebSocket.CloseEvent, ws: WebSocket, server: EdcServer) => Promise<any>
+export type ServerOnClose = (event: WebSocket.CloseEvent, ws: WebSocket, server: EdcServer) => Promise<any> | any
 
 export interface ServerOptions {
     timeout?: number
