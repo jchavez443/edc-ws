@@ -76,7 +76,7 @@ try {
     }
 }
 ```
-> **Note:** if the `cause` Event was set to **`"acknowledge": false`** then no [`AckedErrorEvent`](#AckedErrorEvent) or [`TimeoutError`](#TimeoutError) could be thrown.  
+> **Note:** if the `cause` Event was set to **`"acknowledge": false`** then no [`AckedErrorEvent`](#AckedErrorEvent) or [`TimeoutError`](#TimeoutError) could be thrown. 
 
 Client initilization
 ```ts
